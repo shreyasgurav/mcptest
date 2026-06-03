@@ -1,5 +1,5 @@
 {
-  "name": "mcptest",
+  "name": "@shreyasgurav/mcptest",
   "version": "0.1.0",
   "description": "A declarative, CI-first testing framework for Model Context Protocol (MCP) servers. Like pytest/vitest, but for MCP.",
   "type": "module",

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/mcptest"><img alt="npm" src="https://img.shields.io/npm/v/mcptest?style=flat-square&color=cb3837"></a>
+  <a href="https://www.npmjs.com/package/@shreyasgurav/mcptest"><img alt="npm" src="https://img.shields.io/npm/v/@shreyasgurav/mcptest?style=flat-square&color=cb3837"></a>
   <a href="https://github.com/shreyasgurav/mcptest/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
   <a href="https://nodejs.org"><img alt="node" src="https://img.shields.io/badge/node-%3E%3D18-green?style=flat-square"></a>
 </p>
@@ -19,7 +19,7 @@
 Write declarative test suites in YAML or JSON. Run them in CI. Get pass/fail exit codes. No manual clicking — just `mcptest run`.
 
 ```bash
-npx mcptest run
+npx @shreyasgurav/mcptest run
 
   mcptest v0.1.0
   ─────────────────────────────────
@@ -51,13 +51,13 @@ Every MCP server developer is currently "testing" by opening Inspector, clicking
 ### 1. Install
 
 ```bash
-npm install mcptest --save-dev
+npm install @shreyasgurav/mcptest --save-dev
 ```
 
 ### 2. Create a test file
 
 ```bash
-npx mcptest init
+npx @shreyasgurav/mcptest init
 ```
 
 This creates a `mcptest.yaml` starter. Or write your own:
@@ -93,7 +93,7 @@ tests:
 ### 3. Run
 
 ```bash
-npx mcptest run
+npx @shreyasgurav/mcptest run
 ```
 
 That's it. Three commands. Zero boilerplate.
@@ -105,12 +105,12 @@ That's it. Three commands. Zero boilerplate.
 Run test suites against your MCP server.
 
 ```bash
-mcptest run                          # Auto-discover *.mcptest.yaml files
-mcptest run tests/                   # Run all suites in a directory
-mcptest run my-tests.mcptest.yaml    # Run a specific file
-mcptest run --bail                   # Stop on first failure
-mcptest run -f json                  # JSON output for CI parsing
-mcptest run -t 30000                 # 30s timeout per test
+npx @shreyasgurav/mcptest run                          # Auto-discover *.mcptest.yaml files
+npx @shreyasgurav/mcptest run tests/                   # Run all suites in a directory
+npx @shreyasgurav/mcptest run my-tests.mcptest.yaml    # Run a specific file
+npx @shreyasgurav/mcptest run --bail                   # Stop on first failure
+npx @shreyasgurav/mcptest run -f json                  # JSON output for CI parsing
+npx @shreyasgurav/mcptest run -t 30000                 # 30s timeout per test
 ```
 
 ### `mcptest validate`
@@ -118,10 +118,10 @@ mcptest run -t 30000                 # 30s timeout per test
 Validate your MCP server against spec conventions — tool naming, descriptions, input schemas.
 
 ```bash
-mcptest validate                                # Uses mcptest.yaml in cwd
-mcptest validate --config my-config.yaml        # Specific config
-mcptest validate --command node --args server.js # Inline
-mcptest validate --url http://localhost:3000/mcp --transport http
+npx @shreyasgurav/mcptest validate                                # Uses mcptest.yaml in cwd
+npx @shreyasgurav/mcptest validate --config my-config.yaml        # Specific config
+npx @shreyasgurav/mcptest validate --command node --args server.js # Inline
+npx @shreyasgurav/mcptest validate --url http://localhost:3000/mcp --transport http
 ```
 
 ```
@@ -136,8 +136,8 @@ mcptest validate --url http://localhost:3000/mcp --transport http
 Scaffold a starter `mcptest.yaml` config file.
 
 ```bash
-mcptest init
-mcptest init -o tests/api.mcptest.yaml
+npx @shreyasgurav/mcptest init
+npx @shreyasgurav/mcptest init -o tests/api.mcptest.yaml
 ```
 
 ## Test File Format
@@ -259,7 +259,7 @@ mcptest exits with code `1` when any test fails — CI pipelines pick this up au
 Use mcptest as a library for custom test runners:
 
 ```typescript
-import { McpTestClient, loadSuite, runSuite } from "mcptest";
+import { McpTestClient, loadSuite, runSuite } from "@shreyasgurav/mcptest";
 
 const suite = loadSuite("./tests/my-server.mcptest.yaml");
 const result = await runSuite(suite, {
