@@ -1,0 +1,27 @@
+# Example GitHub Actions workflow for testing MCP servers with mcptest
+name: MCP Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test MCP Server
+        run: npx mcptest run
+
+      - name: Validate MCP Server
+        run: npx mcptest validate

@@ -1,0 +1,75 @@
+# mcptest suite for UniMemory MCP Server
+# https://github.com/shreyasgurav/unimemory
+#
+# SETUP: Set your token before running:
+#   export UNIMEMORY_API_KEY=your_key_here
+#   node dist/cli.js run examples/unimemory.mcptest.yaml
+
+name: unimemory-mcp-tests
+
+server:
+  transport: stdio
+  command: node
+  args:
+    - /Users/shreyasgurav/Documents/Projects/unimemory/mcp/unimemory-mcp/dist/index.js
+  env:
+    MCP_TRANSPORT: stdio
+    # Your token is injected from your shell env via UNIMEMORY_API_KEY
+    # Make sure to: export UNIMEMORY_API_KEY=your_token
+
+timeout: 20000
+
+tests:
+  # ── 1. Smoke test: get_projects doesn't error ──────────────────
+  - name: get_projects returns a list
+    tool: get_projects
+    expect:
+      isError: false
+
+  # ── 2. add_source: store something ────────────────────────────
+  - name: add_source stores content successfully
+    tool: add_source
+    input:
+      content: "mcptest is a declarative CI-first test framework for MCP servers"
+      metadata:
+        source: "mcptest"
+        tags: ["testing", "mcp"]
+    expect:
+      isError: false
+
+  # ── 3. search_memory: find what we just stored ────────────────
+  - name: search_memory returns results for a known query
+    tool: search_memory
+    input:
+      query: "mcptest framework"
+      limit: 5
+    expect:
+      isError: false
+      contains: "mcptest"
+
+  # ── 4. search_memory: empty query handling ────────────────────
+  - name: search_memory handles broad query
+    tool: search_memory
+    input:
+      query: "test"
+      limit: 3
+    expect:
+      isError: false
+
+  # ── 5. get_memory_context: assembles context ──────────────────
+  - name: get_memory_context returns context string
+    tool: get_memory_context
+    input:
+      query: "mcptest"
+      max_tokens: 500
+    expect:
+      isError: false
+
+  # ── 6. get_projects: validate response shape ──────────────────
+  - name: get_projects returns valid JSON structure
+    tool: get_projects
+    expect:
+      isError: false
+      # Uncomment once you know the response shape:
+      # json:
+      #   $type: array

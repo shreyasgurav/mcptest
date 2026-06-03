@@ -1,0 +1,59 @@
+{
+  "name": "mcptest",
+  "version": "0.1.0",
+  "description": "A declarative, CI-first testing framework for Model Context Protocol (MCP) servers. Like pytest/vitest, but for MCP.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "testing",
+    "test-runner",
+    "cli",
+    "ci",
+    "ai",
+    "agents"
+  ],
+  "bin": {
+    "mcptest": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "example": "node examples/echo-server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "ajv": "^8.17.1",
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.6.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

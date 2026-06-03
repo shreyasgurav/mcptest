@@ -1,0 +1,84 @@
+# mcptest — echo-server test suite
+# Tests the example echo MCP server
+
+name: echo-server-tests
+
+server:
+  transport: stdio
+  command: node
+  args:
+    - ./examples/echo-server.mjs
+
+timeout: 10000
+
+tests:
+  - name: Echo returns the input
+    tool: echo
+    input:
+      message: "hello mcptest"
+    expect:
+      text: "hello mcptest"
+
+  - name: Echo contains substring
+    tool: echo
+    input:
+      message: "testing 1 2 3"
+    expect:
+      contains: "1 2 3"
+
+  - name: Add two numbers
+    tool: add
+    input:
+      a: 3
+      b: 7
+    expect:
+      json:
+        result: 10
+
+  - name: Add negative numbers
+    tool: add
+    input:
+      a: -5
+      b: 3
+    expect:
+      json:
+        result: -2
+
+  - name: Greet by name
+    tool: greet
+    input:
+      name: "Shreyas"
+    expect:
+      contains: "Hello, Shreyas"
+      matches: "Welcome to mcptest"
+
+  - name: Get server info returns valid JSON
+    tool: get_info
+    expect:
+      json:
+        name: "echo-server"
+        version: "1.0.0"
+        status: "healthy"
+        tools:
+          $minLength: 3
+
+  - name: Get info schema validation
+    tool: get_info
+    expect:
+      schema:
+        type: object
+        required:
+          - name
+          - version
+          - status
+        properties:
+          name:
+            type: string
+          version:
+            type: string
+          status:
+            type: string
+          tools:
+            type: array
+            items:
+              type: string
