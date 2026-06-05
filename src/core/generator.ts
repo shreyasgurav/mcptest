@@ -140,5 +140,11 @@ function buildServerBlock(server: ServerConfig): string {
   if (server.url) {
     lines.push(`  url: ${server.url}`);
   }
+  if (server.headers && Object.keys(server.headers).length > 0) {
+    lines.push(`  headers:`);
+    for (const [k, v] of Object.entries(server.headers)) {
+      lines.push(`    ${k}: "${v.replace(/"/g, '\\"')}"`);
+    }
+  }
   return lines.join("\n");
 }
