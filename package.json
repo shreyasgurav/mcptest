@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
+    "@google/generative-ai": "^0.24.1",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "ajv": "^8.17.1",
     "chokidar": "^5.0.0",

@@ -85,17 +85,32 @@ Exit code 1 on failure. CI/CD ready out of the box.
 
 Don't want to write tests by hand? Let AI do it.
 
-`mcpunit generate` connects to your server, discovers all tools and their schemas, and auto-generates a complete test suite.
+`mcpunit generate` connects to your server, discovers all tools and their schemas, and auto-generates a complete test suite. Works with **Anthropic, OpenAI, and Google Gemini** — pick the model you already have an API key for.
 
 ```bash
-export ANTHROPIC_API_KEY="sk-..."
+# Claude (default)
+export ANTHROPIC_API_KEY="sk-ant-..."
 npx mcpunit generate --command node --args server.js
+
+# GPT-4o
+export OPENAI_API_KEY="sk-..."
+npx mcpunit generate --command node --args server.js --model gpt-4o
+
+# Gemini
+export GOOGLE_API_KEY="AIza..."
+npx mcpunit generate --command node --args server.js --model gemini-2.0-flash
 ```
 
 → discovers tools
 → reads schemas
 → generates `mcpunit.yaml` with inputs and assertions
 → run immediately with `npx mcpunit run`
+
+See all supported models:
+
+```bash
+npx mcpunit generate --list-models
+```
 
 ## Features
 

@@ -46,7 +46,13 @@ export {
 } from "./core/validator.js";
 export type { ValidationIssue, ValidationReport } from "./core/validator.js";
 
-export { generateSuite } from "./core/generator.js";
+export {
+  generateSuite,
+  detectProvider,
+  resolveApiKey,
+  SUPPORTED_MODELS,
+} from "./core/generator.js";
+export type { GenerateOptions, LLMProvider } from "./core/generator.js";
 export { generateHtmlReport, writeHtmlReport } from "./core/html-reporter.js";
 export { diffServers } from "./core/differ.js";
 export type { DiffResult, DiffChange } from "./core/differ.js";

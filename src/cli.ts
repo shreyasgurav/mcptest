@@ -339,7 +339,15 @@ program
 program
   .command("generate")
   .description("AI-generate a test suite from your server's tool schemas")
-  .option("--api-key <key>", "Anthropic/OpenAI API key (or set ANTHROPIC_API_KEY / OPENAI_API_KEY env)")
+  .option(
+    "--model <model>",
+    "LLM model to use (e.g. claude-sonnet-4-20250514, gpt-4o, gemini-2.0-flash). Provider is auto-detected from model name.",
+    ""
+  )
+  .option(
+    "--api-key <key>",
+    "API key for the chosen provider (or set ANTHROPIC_API_KEY / OPENAI_API_KEY / GOOGLE_API_KEY env)"
+  )
   .option("-o, --output <file>", "Output file", "mcpunit.yaml")
   .option("--command <cmd>", "Server command to spawn (stdio)")
   .option("--args <args>", "Server command arguments (comma-separated)")
@@ -351,10 +359,12 @@ program
   )
   .option(
     "--headers <headers>",
-    "HTTP headers to include (comma-separated Key=Value, e.g. Authorization=Bearer token)"
+    "HTTP headers to include (comma-separated Key=Value)"
   )
   .option("-c, --config <file>", "Existing config file with server block")
+  .option("--list-models", "List all supported models and exit", false)
   .action(async (opts: {
+    model: string;
     apiKey?: string;
     output: string;
     command?: string;
@@ -363,26 +373,63 @@ program
     transport?: string;
     config?: string;
     headers?: string;
+    listModels: boolean;
   }) => {
-    const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY;
+    const { SUPPORTED_MODELS, detectProvider, resolveApiKey } = await import("./core/generator.js");
+
+    // --list-models: print supported models and exit
+    if (opts.listModels) {
+      console.log("");
+      console.log(pc.bold("  Supported models:\n"));
+      for (const [provider, models] of Object.entries(SUPPORTED_MODELS)) {
+        console.log(pc.bold(`  ${provider.charAt(0).toUpperCase() + provider.slice(1)}`));
+        for (const m of models) {
+          console.log(`    ${pc.cyan(m)}`);
+        }
+        console.log("");
+      }
+      console.log(pc.dim("  Env vars:  ANTHROPIC_API_KEY | OPENAI_API_KEY | GOOGLE_API_KEY"));
+      console.log("");
+      process.exit(0);
+    }
+
+    // Resolve provider + key
+    const provider = opts.model ? detectProvider(opts.model) : (
+      opts.apiKey
+        ? (opts.apiKey.startsWith("sk-") ? "openai" : opts.apiKey.startsWith("AIza") ? "google" : "anthropic")
+        : "anthropic"
+    );
+    const apiKey = resolveApiKey(provider, opts.apiKey);
+
     if (!apiKey) {
-      console.error(pc.red("  ✗ API key required. Use --api-key or set ANTHROPIC_API_KEY or OPENAI_API_KEY env variable."));
+      const envVars: Record<string, string> = {
+        anthropic: "ANTHROPIC_API_KEY",
+        openai: "OPENAI_API_KEY",
+        google: "GOOGLE_API_KEY or GEMINI_API_KEY",
+      };
+      console.error(pc.red(`  ✗ No API key found for provider "${provider}".`));
+      console.error(pc.dim(`    Set ${envVars[provider]} or pass --api-key <key>.`));
+      console.error(pc.dim(`    Use --list-models to see all supported models.`));
       process.exit(1);
     }
 
     const server = resolveServerConfig(opts);
     const ora = (await import("ora")).default;
-    const spinner = ora({ text: "  Connecting to server...", color: "cyan" }).start();
+
+    const providerLabel = provider.charAt(0).toUpperCase() + provider.slice(1);
+    const modelLabel = opts.model || "(default)";
+    const spinner = ora({ text: `  Connecting to server...`, color: "cyan" }).start();
 
     try {
       spinner.text = "  Reading tool schemas...";
-      const yaml = await generateSuite(server, apiKey);
+      const yaml = await generateSuite(server, { apiKey, model: opts.model || undefined });
 
       spinner.text = "  Writing test suite...";
       const outputPath = resolve(opts.output);
       writeFileSync(outputPath, yaml, "utf8");
 
       spinner.succeed(pc.green(`  Generated ${opts.output}`));
+      console.log(pc.dim(`  Provider: ${providerLabel}  Model: ${modelLabel}`));
       console.log(pc.dim(`  Run: mcpunit run ${opts.output}`));
       console.log("");
     } catch (err) {
