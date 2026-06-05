@@ -46,6 +46,23 @@ Summary: 2 passed, 1 failed
 
 Every MCP server developer is currently "testing" by opening Inspector, clicking a tool, eyeballing the output, and hoping it works. That's 2012-era REST API testing. mcptest is Postman for MCP — but automated.
 
+## Real-World Example
+
+Testing [UniMemory](https://unimemory.app) — a deployed MCP memory server:
+
+```bash
+mcptest run examples/unimemory.mcptest.yaml
+```
+
+```
+● UniMemory MCP Server Test Suite
+  ✓ List projects     (12092ms)
+  ✓ Save content      (16467ms)  
+  ✓ Search content    (16965ms)
+
+Summary: 3 passed
+```
+
 ## Quick Start
 
 ### 1. Install

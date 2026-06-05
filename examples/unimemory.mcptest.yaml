@@ -1,0 +1,40 @@
+name: UniMemory MCP Server Test Suite
+
+server:
+  transport: http
+  url: https://unimemory.up.railway.app/api/v1/mcp
+  headers:
+    Authorization: "Bearer um_mcp_3dIlBFnPUUC6pGNhv-0A207ynpLfrux-s8iDqy7EKek"
+
+tests:
+  - name: List projects
+    tool: listProjects
+    input: {}
+    expect:
+      isError: false
+      json:
+        projects:
+          $type: array
+
+  - name: Save content
+    tool: save
+    timeout: 60000
+    input:
+      content: "hi"
+    expect:
+      isError: false
+      json:
+        success: { $type: boolean }
+        document_id: { $type: string }
+        message: { $type: string }
+
+  - name: Search content
+    tool: search
+    timeout: 60000
+    input:
+      query: "hi"
+    expect:
+      isError: false
+      json:
+        results:
+          $type: array
