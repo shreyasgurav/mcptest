@@ -263,6 +263,10 @@ program
     'Transport type: "stdio", "http", "sse"',
     "stdio"
   )
+  .option(
+    "--headers <headers>",
+    "HTTP headers to include (comma-separated Key=Value, e.g. Authorization=Bearer token)"
+  )
   .option("-f, --format <format>", 'Output format: "pretty" or "json"', "pretty")
   .action(
     async (opts: {
@@ -272,6 +276,7 @@ program
       url?: string;
       transport?: string;
       format?: string;
+      headers?: string;
     }) => {
       const server = resolveServerConfig(opts);
       const report = await validateServer(server);
@@ -302,12 +307,17 @@ program
     'Transport type: "stdio", "http", "sse"',
     "stdio"
   )
+  .option(
+    "--headers <headers>",
+    "HTTP headers to include (comma-separated Key=Value, e.g. Authorization=Bearer token)"
+  )
   .action(async (opts: {
     config?: string;
     command?: string;
     args?: string;
     url?: string;
     transport?: string;
+    headers?: string;
   }) => {
     const server = resolveServerConfig(opts);
     const client = new McpTestClient(server);
@@ -338,6 +348,10 @@ program
     'Transport type: "stdio", "http", "sse"',
     "stdio"
   )
+  .option(
+    "--headers <headers>",
+    "HTTP headers to include (comma-separated Key=Value, e.g. Authorization=Bearer token)"
+  )
   .option("-c, --config <file>", "Existing config file with server block")
   .action(async (opts: {
     apiKey?: string;
@@ -347,6 +361,7 @@ program
     url?: string;
     transport?: string;
     config?: string;
+    headers?: string;
   }) => {
     const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -582,6 +597,7 @@ function resolveServerConfig(opts: {
   args?: string;
   url?: string;
   transport?: string;
+  headers?: string;
 }): ServerConfig {
   if (opts.config) {
     const abs = resolve(opts.config);
@@ -594,11 +610,27 @@ function resolveServerConfig(opts: {
       process.exit(1);
     }
   } else if (opts.command || opts.url) {
+    const headers: Record<string, string> = {};
+    if (opts.headers) {
+      // Split by comma, then extract key/value by splitting at the first '=' or ':'
+      const parts = opts.headers.split(",");
+      for (const p of parts) {
+        const eqIdx = p.indexOf("=");
+        const colIdx = p.indexOf(":");
+        const idx = eqIdx !== -1 && colIdx !== -1 ? Math.min(eqIdx, colIdx) : (eqIdx !== -1 ? eqIdx : colIdx);
+        if (idx !== -1) {
+          const key = p.substring(0, idx).trim();
+          const val = p.substring(idx + 1).trim();
+          headers[key] = val;
+        }
+      }
+    }
     return {
       transport: (opts.transport as ServerConfig["transport"]) ?? "stdio",
       command: opts.command,
       args: opts.args?.split(",").map((a) => a.trim()),
       url: opts.url,
+      headers: Object.keys(headers).length > 0 ? headers : undefined,
     };
   } else {
     const candidates = ["mcptest.yaml", "mcptest.yml", "mcptest.json"];
