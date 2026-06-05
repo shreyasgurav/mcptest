@@ -1,9 +1,6 @@
 <p align="center">
   <h1 align="center">mcpunit</h1>
-  <p align="center">
-    <strong>The testing framework for MCP servers.</strong><br>
-    Write tests. Validate tools. Ship with confidence.
-  </p>
+  <p align="center">The testing framework for MCP servers.</p>
 </p>
 
 <p align="center">
@@ -14,12 +11,24 @@
 
 ---
 
-Automated testing, assertions, snapshots, CI/CD, and AI-generated test suites for [Model Context Protocol](https://modelcontextprotocol.io/) servers.
-
 ```bash
-npm install -D mcpunit
 npx mcpunit run
 ```
+
+```
+  mcpunit v0.5.0
+
+  ● my-mcp-server
+    ✓ store_memory   (212ms)
+    ✓ search_memory  (334ms)
+    ✓ delete_memory  (98ms)
+
+  Summary: 3 passed
+```
+
+That's it. Your MCP server is now tested automatically. Exit code 1 on failure — GitHub Actions ready.
+
+---
 
 ## The Problem
 
@@ -32,16 +41,16 @@ Today most MCP developers test like this:
 5. Hit run
 6. Look at output
 7. *Hope it works*
-8. Repeat forever
+8. Repeat every time you change something
 
-That's manual testing. It's the equivalent of testing REST APIs by typing URLs into a browser.
+That's manual testing. It doesn't scale. It doesn't catch regressions. It doesn't run in CI.
 
 ## The Solution
 
-Write declarative tests in YAML. Run them automatically.
+Write declarative tests in YAML once. Run them forever.
 
 ```yaml
-name: my-mcp-tests
+name: my-mcp-server
 
 server:
   transport: stdio
@@ -66,26 +75,11 @@ tests:
           $minLength: 1
 ```
 
-```bash
-npx mcpunit run
-
-  mcpunit v0.5.0
-  ─────────────────────────────────
-
-  ● my-mcp-tests
-    ✓ Store a memory    (212ms)
-    ✓ Search memories   (334ms)
-
-  Summary: 2 passed
-```
-
-Exit code 1 on failure. CI/CD ready out of the box.
-
 ## AI Test Generation
 
 Don't want to write tests by hand? Let AI do it.
 
-`mcpunit generate` connects to your server, discovers all tools and their schemas, and auto-generates a complete test suite. Works with **Anthropic, OpenAI, and Google Gemini** — pick the model you already have an API key for.
+`mcpunit generate` connects to your server, reads all tool schemas, and auto-generates a complete test suite. Works with **Claude, GPT-4o, and Gemini** — use whatever API key you already have.
 
 ```bash
 # Claude (default)
@@ -93,18 +87,11 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 npx mcpunit generate --command node --args server.js
 
 # GPT-4o
-export OPENAI_API_KEY="sk-..."
 npx mcpunit generate --command node --args server.js --model gpt-4o
 
 # Gemini
-export GOOGLE_API_KEY="AIza..."
 npx mcpunit generate --command node --args server.js --model gemini-2.0-flash
 ```
-
-→ discovers tools
-→ reads schemas
-→ generates `mcpunit.yaml` with inputs and assertions
-→ run immediately with `npx mcpunit run`
 
 See all supported models:
 
@@ -114,36 +101,28 @@ npx mcpunit generate --list-models
 
 ## Features
 
-- **Assertions** — Exact text, `contains`, regex, JSON path traversal, operators (`$gte`, `$contains`, `$minLength`), and full JSON Schema validation
-- **Snapshots** — Lock complex JSON outputs. Catch regressions with `mcpunit run --update-snapshots`
-- **Hooks** — `before`/`after` (suite-level) and `setup`/`teardown` (per-test) to seed and clean state
-- **Retries** — Configurable `retry` and `retryDelay` for flaky AI-backed tools
+- **Assertions** — `contains`, `text`, `matches`, JSON path operators (`$gte`, `$minLength`, `$contains`), JSON Schema
+- **Snapshots** — Lock outputs, catch regressions with `--update-snapshots`
+- **Hooks** — `before` / `after` suites, `setup` / `teardown` per test
+- **Retries** — Built-in `retry` + `retryDelay` for flaky AI-backed tools
 - **Resources & Prompts** — Test MCP resources and prompt templates, not just tools
-- **Watch Mode** — `mcpunit run --watch` reruns tests on file changes
-- **Server Diff** — `mcpunit diff` compares responses from two server versions side-by-side
-- **Validation** — `mcpunit validate` checks your server against MCP spec conventions
-- **HTML Reports** — `mcpunit run -f html` generates a visual test report
-- **AI Generation** — `mcpunit generate` creates test suites from your server's tool schemas
-- **CI/CD** — JSON output, exit codes, and GitHub Actions integration
+- **Watch Mode** — `--watch` reruns tests on file changes
+- **Server Diff** — Compare two server versions side-by-side
+- **HTML Reports** — `--format html` for visual reports
+- **CI/CD** — JSON output, exit codes, GitHub Actions out of the box
 
 ## Quick Start
 
 ```bash
-# Install
 npm install -D mcpunit
-
-# Create a starter test file
-npx mcpunit init
-
-# Edit mcpunit.yaml with your server config and tests
-
-# Run
+npx mcpunit init       # creates mcpunit.yaml
+# edit the file, then:
 npx mcpunit run
 ```
 
 ## Real-World Example
 
-Testing [UniMemory](https://unimemory.app) — a deployed MCP memory server:
+Testing [UniMemory](https://unimemory.app) — a live, deployed MCP server:
 
 ```bash
 npx mcpunit run examples/unimemory.mcpunit.yaml
@@ -158,14 +137,13 @@ npx mcpunit run examples/unimemory.mcpunit.yaml
 Summary: 3 passed
 ```
 
-## CI/CD Integration
+This runs against a real deployed server — not a toy example.
 
-Add to your GitHub Actions workflow:
+## CI/CD Integration
 
 ```yaml
 # .github/workflows/mcp-tests.yml
 name: MCP Tests
-
 on: [push, pull_request]
 
 jobs:
@@ -182,13 +160,13 @@ jobs:
 
 Every push triggers tests. Failures block the merge. No manual testing needed.
 
-## All Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
 | `mcpunit run [path]` | Run test suites (`--watch`, `--bail`, `-f json\|html`, `--update-snapshots`) |
-| `mcpunit init` | Generate a starter `mcpunit.yaml` |
-| `mcpunit generate` | AI-generate tests from server tool schemas |
+| `mcpunit init` | Create a starter `mcpunit.yaml` |
+| `mcpunit generate` | AI-generate tests from server schemas (Claude / GPT-4o / Gemini) |
 | `mcpunit validate` | Check server against MCP spec conventions |
 | `mcpunit list` | List all tools exposed by the server |
 | `mcpunit diff` | Compare responses from two server versions |
@@ -203,7 +181,7 @@ Every push triggers tests. Failures block the merge. No manual testing needed.
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions.
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions.
 
 ## License
 
