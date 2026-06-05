@@ -328,7 +328,7 @@ program
 program
   .command("generate")
   .description("AI-generate a test suite from your server's tool schemas")
-  .option("--api-key <key>", "Anthropic API key (or set ANTHROPIC_API_KEY env)")
+  .option("--api-key <key>", "Anthropic/OpenAI API key (or set ANTHROPIC_API_KEY / OPENAI_API_KEY env)")
   .option("-o, --output <file>", "Output file", "mcptest.yaml")
   .option("--command <cmd>", "Server command to spawn (stdio)")
   .option("--args <args>", "Server command arguments (comma-separated)")
@@ -348,9 +348,9 @@ program
     transport?: string;
     config?: string;
   }) => {
-    const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      console.error(pc.red("  ✗ API key required. Use --api-key or set ANTHROPIC_API_KEY env variable."));
+      console.error(pc.red("  ✗ API key required. Use --api-key or set ANTHROPIC_API_KEY or OPENAI_API_KEY env variable."));
       process.exit(1);
     }
 

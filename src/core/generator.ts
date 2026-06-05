@@ -6,12 +6,13 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { McpTestClient } from "./client.js";
 import type { ServerConfig } from "../types.js";
 
 /**
  * Generate a complete mcptest YAML test suite by introspecting a server's
- * tool schemas and using Claude to produce realistic test cases.
+ * tool schemas and using Claude or GPT to produce realistic test cases.
  */
 export async function generateSuite(
   server: ServerConfig,
@@ -32,18 +33,10 @@ export async function generateSuite(
     );
   }
 
-  const anthropic = new Anthropic({ apiKey });
-
   // Build the server config block for the YAML
   const serverBlock = buildServerBlock(server);
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4000,
-    messages: [
-      {
-        role: "user",
-        content: `You are an expert at writing mcptest YAML test suites for MCP (Model Context Protocol) servers.
+  const promptContent = `You are an expert at writing mcptest YAML test suites for MCP (Model Context Protocol) servers.
 
 Here are the tools exposed by this MCP server:
 ${JSON.stringify(tools, null, 2)}
@@ -91,16 +84,40 @@ ${prompts.length > 0 ? `prompts:
     args:
       <key>: <value>
     expect:
-      contains: <expected content>` : ""}`,
-      },
-    ],
-  });
+      contains: <expected content>` : ""}`;
 
-  const yaml =
-    response.content[0].type === "text" ? response.content[0].text : "";
+  let yaml = "";
+
+  if (apiKey.startsWith("sk-")) {
+    const openai = new OpenAI({ apiKey });
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: promptContent,
+        },
+      ],
+      max_tokens: 4000,
+    });
+    yaml = response.choices[0]?.message?.content ?? "";
+  } else {
+    const anthropic = new Anthropic({ apiKey });
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4000,
+      messages: [
+        {
+          role: "user",
+          content: promptContent,
+        },
+      ],
+    });
+    yaml = response.content[0].type === "text" ? response.content[0].text : "";
+  }
 
   if (!yaml.trim()) {
-    throw new Error("Claude returned empty response. Try again.");
+    throw new Error("AI returned empty response. Try again.");
   }
 
   return yaml;
