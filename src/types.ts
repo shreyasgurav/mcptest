@@ -28,6 +28,18 @@ export interface ServerConfig {
 
   /** Extra headers to send (http / sse transports). */
   headers?: Record<string, string>;
+
+  /** Timeout in milliseconds to wait for the server to start up (stdio only). Default 5000ms. */
+  startupTimeout?: number;
+}
+
+/** A single hook action (tool call) run before/after suites or tests. */
+export interface HookAction {
+  /** Name of the MCP tool to call. */
+  tool: string;
+
+  /** Arguments passed to the tool. */
+  input?: Record<string, unknown>;
 }
 
 /** A single matcher value. Either a literal (deep-equality) or an operator object. */
@@ -76,6 +88,18 @@ export interface TestCase {
 
   /** Per-test timeout in milliseconds. Overrides the suite default. */
   timeout?: number;
+
+  /** List of tool calls to run before this test case. */
+  setup?: HookAction[];
+
+  /** List of tool calls to run after this test case. */
+  teardown?: HookAction[];
+
+  /** Number of times to retry a failed or errored test case. */
+  retry?: number;
+
+  /** Delay in milliseconds between retry attempts. Default 500ms. */
+  retryDelay?: number;
 }
 
 /** A full test suite, typically loaded from a YAML or JSON file. */
@@ -94,6 +118,12 @@ export interface TestSuite {
 
   /** Absolute path the suite was loaded from (filled in by the loader). */
   filePath?: string;
+
+  /** Hook run once before any tests in this suite start. */
+  before?: HookAction[];
+
+  /** Hook run once after all tests in this suite finish. */
+  after?: HookAction[];
 }
 
 /** Outcome of a single assertion within a test. */

@@ -1,0 +1,8 @@
+name: crash-tests
+server:
+  transport: stdio
+  command: node
+  args:
+    - ./examples/crashing-server.mjs
+tests:
+  - tool: dummy

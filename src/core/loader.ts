@@ -1,9 +1,10 @@
 import { readFileSync, statSync, readdirSync } from "node:fs";
 import { resolve, join, basename, extname } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { TestSuite } from "../types.js";
+import type { TestSuite, HookAction } from "../types.js";
 
 const SUITE_EXTENSIONS = new Set([".yaml", ".yml", ".json"]);
+
 
 /**
  * Resolve a path (file or directory) into a list of test-suite file paths.
@@ -64,6 +65,22 @@ export function loadSuite(filePath: string): TestSuite {
   return suite;
 }
 
+function validateHooks(hooks: unknown, path: string): HookAction[] {
+  if (hooks === undefined) return [];
+  if (!Array.isArray(hooks)) {
+    throw new Error(`${path} must be an array of hook actions.`);
+  }
+  hooks.forEach((h, i) => {
+    if (typeof h !== "object" || h === null) {
+      throw new Error(`${path}[${i}] must be an object.`);
+    }
+    if (typeof (h as Record<string, unknown>).tool !== "string") {
+      throw new Error(`${path}[${i}] requires a "tool" name.`);
+    }
+  });
+  return hooks as HookAction[];
+}
+
 function validateSuite(data: unknown, filePath: string): TestSuite {
   if (typeof data !== "object" || data === null) {
     throw new Error(`${filePath}: suite must be a YAML/JSON object.`);
@@ -77,12 +94,28 @@ function validateSuite(data: unknown, filePath: string): TestSuite {
     throw new Error(`${filePath}: "tests" must be an array.`);
   }
 
+  const before = validateHooks(obj.before, `${filePath}: "before" hook`);
+  const after = validateHooks(obj.after, `${filePath}: "after" hook`);
+
   obj.tests.forEach((t, i) => {
     if (typeof t !== "object" || t === null) {
       throw new Error(`${filePath}: tests[${i}] must be an object.`);
     }
-    if (typeof (t as Record<string, unknown>).tool !== "string") {
+    const tObj = t as Record<string, unknown>;
+    if (typeof tObj.tool !== "string") {
       throw new Error(`${filePath}: tests[${i}] requires a "tool" name.`);
+    }
+    if (tObj.setup !== undefined) {
+      validateHooks(tObj.setup, `${filePath}: tests[${i}].setup`);
+    }
+    if (tObj.teardown !== undefined) {
+      validateHooks(tObj.teardown, `${filePath}: tests[${i}].teardown`);
+    }
+    if (tObj.retry !== undefined && typeof tObj.retry !== "number") {
+      throw new Error(`${filePath}: tests[${i}].retry must be a number.`);
+    }
+    if (tObj.retryDelay !== undefined && typeof tObj.retryDelay !== "number") {
+      throw new Error(`${filePath}: tests[${i}].retryDelay must be a number.`);
     }
   });
 
@@ -95,5 +128,7 @@ function validateSuite(data: unknown, filePath: string): TestSuite {
     timeout: typeof obj.timeout === "number" ? obj.timeout : undefined,
     tests: obj.tests as TestSuite["tests"],
     filePath,
+    before: before.length > 0 ? before : undefined,
+    after: after.length > 0 ? after : undefined,
   };
 }

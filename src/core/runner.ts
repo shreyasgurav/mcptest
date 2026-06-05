@@ -3,9 +3,11 @@ import type {
   TestCase,
   TestResult,
   TestSuite,
+  HookAction,
 } from "../types.js";
 import { McpTestClient } from "./client.js";
 import { evaluate } from "./assertions.js";
+import pc from "picocolors";
 
 const DEFAULT_TIMEOUT = 15000;
 
@@ -14,6 +16,21 @@ export interface RunOptions {
   bail?: boolean;
   /** Called after each test completes, for live reporting. */
   onResult?: (result: TestResult) => void;
+}
+
+/** Helper to run a list of hook actions sequentially. */
+async function runHooks(
+  client: McpTestClient,
+  hooks: HookAction[] | undefined,
+  defaultTimeout: number
+): Promise<void> {
+  if (!hooks || hooks.length === 0) return;
+  for (const action of hooks) {
+    const res = await client.callTool(action.tool, action.input, defaultTimeout);
+    if (res.isError) {
+      throw new Error(`Hook tool "${action.tool}" returned an error status.`);
+    }
+  }
 }
 
 /**
@@ -35,11 +52,23 @@ export async function runSuite(
     connectError = (err as Error).message;
   }
 
+  let beforeHookError: string | undefined;
+  if (!connectError && suite.before && suite.before.length > 0) {
+    try {
+      await runHooks(client, suite.before, suite.timeout ?? DEFAULT_TIMEOUT);
+    } catch (err) {
+      beforeHookError = (err as Error).message;
+    }
+  }
+
   for (const test of suite.tests) {
-    if (connectError) {
+    const hookOrConnectErr = connectError || beforeHookError;
+    if (hookOrConnectErr) {
       const errored = erroredResult(
         test,
-        `could not connect to server: ${connectError}`
+        connectError
+          ? `could not connect to server: ${connectError}`
+          : `before hook failed: ${beforeHookError}`
       );
       results.push(errored);
       options.onResult?.(errored);
@@ -68,6 +97,15 @@ export async function runSuite(
     }
   }
 
+  // Run suite-level teardown / after hooks if we connected and didn't fail before hook
+  if (!connectError && !beforeHookError && suite.after && suite.after.length > 0) {
+    try {
+      await runHooks(client, suite.after, suite.timeout ?? DEFAULT_TIMEOUT);
+    } catch (err) {
+      console.error(pc.red(`  ⚠ after hook failed: ${(err as Error).message}`));
+    }
+  }
+
   await client.close();
 
   const summary = summarize(results);
@@ -88,28 +126,88 @@ async function runTest(
   const name = test.name ?? test.tool;
   const start = Date.now();
   const timeout = test.timeout ?? defaultTimeout;
+  const retryCount = test.retry ?? 0;
+  const retryDelay = test.retryDelay ?? 500;
 
-  try {
-    const result = await client.callTool(test.tool, test.input, timeout);
-    const assertions = evaluate(test.expect, result);
-    const ok = assertions.every((a) => a.ok);
-    return {
-      name,
-      tool: test.tool,
-      status: ok ? "passed" : "failed",
-      durationMs: Date.now() - start,
-      assertions,
-    };
-  } catch (err) {
-    return {
-      name,
-      tool: test.tool,
-      status: "errored",
-      durationMs: Date.now() - start,
-      assertions: [],
-      error: (err as Error).message,
-    };
+  let attempt = 0;
+  let lastResult: TestResult | undefined;
+
+  while (attempt <= retryCount) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+    }
+
+    let setupDone = false;
+    try {
+      // 1. Setup hooks
+      if (test.setup && test.setup.length > 0) {
+        await runHooks(client, test.setup, timeout);
+      }
+      setupDone = true;
+
+      // 2. Main tool call
+      const result = await client.callTool(test.tool, test.input, timeout);
+
+      // 3. Evaluate assertions
+      const assertions = evaluate(test.expect, result);
+      const ok = assertions.every((a) => a.ok);
+
+      // 4. Teardown hooks
+      if (test.teardown && test.teardown.length > 0) {
+        await runHooks(client, test.teardown, timeout);
+      }
+
+      lastResult = {
+        name,
+        tool: test.tool,
+        status: ok ? "passed" : "failed",
+        durationMs: Date.now() - start,
+        assertions,
+      };
+
+      if (ok) {
+        return lastResult;
+      }
+    } catch (err) {
+      // Run teardown even if tool call or assertions failed/errored
+      if (setupDone && test.teardown && test.teardown.length > 0) {
+        try {
+          await runHooks(client, test.teardown, timeout);
+        } catch (teardownErr) {
+          lastResult = {
+            name,
+            tool: test.tool,
+            status: "errored",
+            durationMs: Date.now() - start,
+            assertions: [],
+            error: `${(err as Error).message} (Additionally, teardown failed: ${(teardownErr as Error).message})`,
+          };
+        }
+      }
+
+      if (!lastResult || lastResult.status !== "errored") {
+        lastResult = {
+          name,
+          tool: test.tool,
+          status: "errored",
+          durationMs: Date.now() - start,
+          assertions: [],
+          error: (err as Error).message,
+        };
+      }
+    }
+
+    attempt++;
   }
+
+  return lastResult || {
+    name,
+    tool: test.tool,
+    status: "errored",
+    durationMs: Date.now() - start,
+    assertions: [],
+    error: "Unknown execution error",
+  };
 }
 
 function erroredResult(test: TestCase, message: string): TestResult {

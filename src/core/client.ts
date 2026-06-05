@@ -31,6 +31,7 @@ export class McpTestClient {
   private client: Client;
   private transport?: Transport;
   private connected = false;
+  private stderrBuffer = "";
 
   constructor(private readonly server: ServerConfig) {
     this.client = new Client(
@@ -39,12 +40,65 @@ export class McpTestClient {
     );
   }
 
+  /** Get the accumulated stderr from the spawned server process. */
+  getStderr(): string {
+    return this.stderrBuffer;
+  }
+
   /** Connect to the server using the configured transport. */
   async connect(): Promise<void> {
     if (this.connected) return;
     this.transport = this.buildTransport();
-    await this.client.connect(this.transport);
-    this.connected = true;
+    this.stderrBuffer = "";
+
+    if (this.transport instanceof StdioClientTransport) {
+      this.transport.stderr?.on("data", (chunk) => {
+        this.stderrBuffer += chunk.toString();
+      });
+    }
+
+    try {
+      await this.client.connect(this.transport);
+    } catch (err) {
+      if (this.stderrBuffer) {
+        throw new Error(`${(err as Error).message}\nServer Stderr Output:\n${this.stderrBuffer}`);
+      }
+      throw err;
+    }
+
+    // Polling listTools until the server responds or timeout is exceeded.
+    const timeout = this.server.startupTimeout ?? 5000;
+    const deadline = Date.now() + timeout;
+    let lastError: Error | undefined;
+
+    while (Date.now() < deadline) {
+      try {
+        await this.client.listTools();
+        this.connected = true;
+        return;
+      } catch (err) {
+        lastError = err as Error;
+        // Wait 100ms before retrying
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+
+    // Timeout exceeded
+    try {
+      await this.client.close();
+    } catch {
+      // Ignore errors closing client
+    }
+    this.connected = false;
+
+    let errMsg = `Server did not become ready within startup timeout of ${timeout}ms.`;
+    if (lastError) {
+      errMsg += ` Last error: ${lastError.message}`;
+    }
+    if (this.stderrBuffer) {
+      errMsg += `\nServer Stderr Output:\n${this.stderrBuffer}`;
+    }
+    throw new Error(errMsg);
   }
 
   /** Close the connection (and terminate the subprocess for stdio). */

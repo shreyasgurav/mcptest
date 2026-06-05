@@ -1,0 +1,44 @@
+# mcptest — suite for testing hooks and retries
+name: hook-and-retry-tests
+
+server:
+  transport: stdio
+  command: node
+  args:
+    - ./examples/hook-test-server.mjs
+
+before:
+  - tool: reset
+
+tests:
+  - name: Add suite-setup item
+    tool: add_item
+    input:
+      item: "suite-setup"
+    expect:
+      text: "added: suite-setup"
+
+  - name: Test setup and teardown hooks
+    setup:
+      - tool: add_item
+        input:
+          item: "test-setup"
+    tool: get_items
+    expect:
+      contains: "test-setup"
+    teardown:
+      - tool: add_item
+        input:
+          item: "test-teardown"
+
+  - name: Verify teardown ran and added test-teardown item
+    tool: get_items
+    expect:
+      contains: "test-teardown"
+
+  - name: Flaky tool succeeds on 3rd attempt (with 2 retries)
+    tool: flaky
+    retry: 2
+    retryDelay: 100
+    expect:
+      text: "flaky success"

@@ -1,6 +1,6 @@
 {
   "name": "@shreyasgurav/mcptest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A declarative, CI-first testing framework for Model Context Protocol (MCP) servers. Like pytest/vitest, but for MCP.",
   "type": "module",
   "license": "MIT",
@@ -45,6 +45,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "ajv": "^8.17.1",
+    "chokidar": "^5.0.0",
     "commander": "^12.1.0",
     "picocolors": "^1.1.1",
     "yaml": "^2.6.1",
