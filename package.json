@@ -1,6 +1,6 @@
 {
   "name": "@shreyasgurav/mcptest",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A declarative, CI-first testing framework for Model Context Protocol (MCP) servers. Like pytest/vitest, but for MCP.",
   "type": "module",
   "license": "MIT",
@@ -12,7 +12,9 @@
     "cli",
     "ci",
     "ai",
-    "agents"
+    "agents",
+    "developer-tools",
+    "automation"
   ],
   "bin": {
     "mcptest": "./dist/cli.js"

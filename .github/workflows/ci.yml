@@ -24,7 +24,7 @@ jobs:
         run: npm run build
 
       - name: Test MCP Server
-        run: node dist/cli.js run examples/
+        run: node dist/cli.js run examples/echo.mcptest.yaml
 
       - name: Validate MCP Server
         run: node dist/cli.js validate --config examples/echo.mcptest.yaml

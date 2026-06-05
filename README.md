@@ -21,7 +21,7 @@ Write declarative test suites in YAML or JSON. Run them in CI. Get pass/fail exi
 ```bash
 npx @shreyasgurav/mcptest run
 
-  mcptest v0.1.0
+  mcptest v0.2.0
   ─────────────────────────────────
 
 ● my-server-tests
@@ -111,28 +111,29 @@ npx @shreyasgurav/mcptest run my-tests.mcptest.yaml    # Run a specific file
 npx @shreyasgurav/mcptest run --bail                   # Stop on first failure
 npx @shreyasgurav/mcptest run -f json                  # JSON output for CI parsing
 npx @shreyasgurav/mcptest run -t 30000                 # 30s timeout per test
-npx @shreyasgurav/mcptest run --watch                  # Rerun on file changes
+npx @shreyasgurav/mcptest run --watch                  # Watch mode — reruns on file changes
 ```
 
 ### `mcptest list`
 
-Discover tools exposed by your MCP server before writing tests.
+Inspect your MCP server — lists all tools with their descriptions in a formatted table. Great for exploring an unfamiliar server before writing tests.
 
 ```bash
-npx @shreyasgurav/mcptest list                                    # Uses mcptest.yaml in cwd
-npx @shreyasgurav/mcptest list --config my-config.yaml            # Specific config
-npx @shreyasgurav/mcptest list --command node --args server.js    # Inline
+npx @shreyasgurav/mcptest list                                   # Uses mcptest.yaml in cwd
+npx @shreyasgurav/mcptest list --command node --args server.js   # Inline
 npx @shreyasgurav/mcptest list --url http://localhost:3000/mcp --transport http
 ```
 
 ```
   Tools (4):
-  ┌─────────────┬────────────────────────────────────────────────────────────┐
-  │ Tool Name   │ Description                                                │
-  ├─────────────┼────────────────────────────────────────────────────────────┤
-  │ echo        │ Echoes the input message back                              │
-  │ add         │ Adds two numbers together                                  │
-  └─────────────┴────────────────────────────────────────────────────────────┘
+  ┌──────────┬──────────────────────────────────────────────────────────────┐
+  │ Tool Name │ Description                                                 │
+  ├──────────┼──────────────────────────────────────────────────────────────┤
+  │ echo      │ Echoes the input message back.                              │
+  │ add       │ Adds two numbers together.                                  │
+  │ greet     │ Returns a greeting for the given name.                      │
+  │ get_info  │ Returns structured JSON info about the server.              │
+  └──────────┴──────────────────────────────────────────────────────────────┘
 ```
 
 ### `mcptest validate`
@@ -170,69 +171,24 @@ mcptest supports YAML (`.yaml`, `.yml`) and JSON (`.json`) test files.
 
 ```yaml
 server:
-  # stdio transport (spawn a subprocess)
+  # stdio transport (spawn a subprocess) — default
   transport: stdio
   command: node
   args: ["./server.js"]
   env:
     API_KEY: "test-key"
   cwd: ./path/to/server
+  startupTimeout: 8000   # ms to wait for server to become ready (default: 5000)
 
   # OR http transport (connect to running server)
-  transport: http
-  url: http://localhost:3000/mcp
-  headers:
-    Authorization: "Bearer token"
+  # transport: http
+  # url: http://localhost:3000/mcp
+  # headers:
+  #   Authorization: "Bearer token"
 
   # OR sse transport
-  transport: sse
-  url: http://localhost:3000/sse
-
-  # Wait up to 10s for the server to become ready (stdio only, default 5000ms)
-  startupTimeout: 10000
-```
-
-### Hooks and Retries
-
-Use suite-level hooks to reset shared state, per-test setup/teardown for isolation, and retries for flaky tools.
-
-```yaml
-name: stateful-server-tests
-
-server:
-  transport: stdio
-  command: node
-  args: ["./server.js"]
-
-# Run once before all tests
-before:
-  - tool: reset
-    input: {}
-
-# Run once after all tests
-after:
-  - tool: cleanup
-    input: {}
-
-tests:
-  - name: Store then verify
-    setup:
-      - tool: add_item
-        input: { item: "test-data" }
-    tool: get_items
-    expect:
-      contains: "test-data"
-    teardown:
-      - tool: clear_items
-        input: {}
-
-  - name: Flaky AI-backed tool
-    tool: generate
-    input: { prompt: "hello" }
-    retry: 3          # retry up to 3 times on failure
-    retryDelay: 500   # ms between attempts
-    expect:
-      contains: "hello"
+  # transport: sse
+  # url: http://localhost:3000/sse
 ```
 
 ### Assertions
@@ -299,6 +255,63 @@ tests:
 | `$exists` | Not null/undefined | `{ $exists: true }` |
 | `$in` | Value in array | `{ $in: ["a", "b", "c"] }` |
 
+### Hooks
+
+Run tool calls before/after suites or individual tests — useful for seeding and cleaning up state.
+
+```yaml
+# Suite-level hooks (run once for the whole suite)
+before:
+  - tool: reset_database
+    input: {}
+
+after:
+  - tool: cleanup
+    input: {}
+
+tests:
+  - name: Test with per-test hooks
+    setup:
+      - tool: seed_user
+        input: { id: 1, name: "Alice" }
+    tool: get_user
+    input: { id: 1 }
+    expect:
+      json:
+        name: "Alice"
+    teardown:
+      - tool: delete_user
+        input: { id: 1 }
+```
+
+- `before` / `after` — run once before/after all tests in the suite
+- `setup` / `teardown` — run before/after each individual test
+- `teardown` always runs, even if the test itself fails or errors
+
+### Retries
+
+For flaky tools (AI-backed responses, network calls), configure automatic retries:
+
+```yaml
+tests:
+  - name: AI response check
+    tool: generate_text
+    input:
+      prompt: "hello"
+    retry: 3          # retry up to 3 times on failure/error
+    retryDelay: 500   # ms between retries (default: 500)
+    expect:
+      contains: "hello"
+```
+
+### Watch Mode
+
+Keep a terminal open while developing — mcptest reruns your suite automatically whenever you change a `.js`, `.ts`, `.yaml`, or `.json` file:
+
+```bash
+npx @shreyasgurav/mcptest run --watch
+```
+
 ## GitHub Actions
 
 ```yaml
@@ -316,8 +329,8 @@ jobs:
         with:
           node-version: "20"
       - run: npm ci
-      - run: npx mcptest run
-      - run: npx mcptest validate
+      - run: npx @shreyasgurav/mcptest run
+      - run: npx @shreyasgurav/mcptest validate
 ```
 
 mcptest exits with code `1` when any test fails — CI pipelines pick this up automatically.
@@ -348,16 +361,6 @@ mcptest auto-discovers test files by scanning for:
 
 Just run `mcptest run` in your project root and it finds everything.
 
-## Watch Mode
-
-During development, rerun tests automatically when source or test files change:
-
-```bash
-npx @shreyasgurav/mcptest run --watch
-```
-
-Watches `.js`, `.mjs`, `.ts`, `.yaml`, `.yml`, and `.json` files (ignores `node_modules`, `dist`, `.git`). Press `Ctrl+C` to exit.
-
 ## Supported Transports
 
 | Transport | Use Case |
@@ -374,6 +377,7 @@ cd mcptest
 npm install
 npm run build
 node dist/cli.js run examples/echo.mcptest.yaml
+node dist/cli.js list --command node --args examples/echo-server.mjs
 ```
 
 ## License

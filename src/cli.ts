@@ -30,7 +30,7 @@ import type { ServerConfig } from "./types.js";
 import { McpTestClient } from "./core/client.js";
 import type { ToolInfo } from "./core/client.js";
 
-const pkg = { name: "mcptest", version: "0.1.1" };
+const pkg = { name: "mcptest", version: "0.2.0" };
 
 const program = new Command()
   .name(pkg.name)
