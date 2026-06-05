@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">mcptest</h1>
+  <h1 align="center">mcpunit</h1>
   <p align="center">
     <strong>The testing framework for MCP servers.</strong><br>
     Declarative. CI-first. Zero boilerplate.
@@ -7,21 +7,21 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@shreyasgurav/mcptest"><img alt="npm" src="https://img.shields.io/npm/v/@shreyasgurav/mcptest?style=flat-square&color=cb3837"></a>
-  <a href="https://github.com/shreyasgurav/mcptest/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
+  <a href="https://www.npmjs.com/package/@shreyasgurav/mcpunit"><img alt="npm" src="https://img.shields.io/npm/v/@shreyasgurav/mcpunit?style=flat-square&color=cb3837"></a>
+  <a href="https://github.com/shreyasgurav/mcpunit/blob/main/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
   <a href="https://nodejs.org"><img alt="node" src="https://img.shields.io/badge/node-%3E%3D18-green?style=flat-square"></a>
 </p>
 
 ---
 
-**mcptest** is the `pytest` / `vitest` equivalent for [Model Context Protocol](https://modelcontextprotocol.io/) servers.
+**mcpunit** is the `pytest` / `vitest` equivalent for [Model Context Protocol](https://modelcontextprotocol.io/) servers.
 
-Write declarative test suites in YAML or JSON. Run them in CI. Get pass/fail exit codes. No manual clicking — just `mcptest run`.
+Write declarative test suites in YAML or JSON. Run them in CI. Get pass/fail exit codes. No manual clicking — just `mcpunit run`.
 
 ```bash
-npx @shreyasgurav/mcptest run
+npx @shreyasgurav/mcpunit run
 
-  mcptest v0.3.0
+  mcpunit v0.3.0
   ─────────────────────────────────
 
 ● my-server-tests
@@ -36,22 +36,22 @@ Summary: 2 passed, 1 failed
 3 tests across 1 suite(s) in 561ms
 ```
 
-## Why mcptest?
+## Why mcpunit?
 
-| What exists today | What mcptest does |
+| What exists today | What mcpunit does |
 |---|---|
 | **MCP Inspector** — manual GUI, click-to-test | Automated test runner with assertions |
 | **Postman/Apidog** — bolt-on MCP support | Purpose-built for MCP, declarative YAML |
 | **Nothing for CI** — no automated regression testing | Exit code 1 on failure → GitHub Actions ready |
 
-Every MCP server developer is currently "testing" by opening Inspector, clicking a tool, eyeballing the output, and hoping it works. That's 2012-era REST API testing. mcptest is Postman for MCP — but automated.
+Every MCP server developer is currently "testing" by opening Inspector, clicking a tool, eyeballing the output, and hoping it works. That's 2012-era REST API testing. mcpunit is Postman for MCP — but automated.
 
 ## Real-World Example
 
 Testing [UniMemory](https://unimemory.app) — a deployed MCP memory server:
 
 ```bash
-mcptest run examples/unimemory.mcptest.yaml
+mcpunit run examples/unimemory.mcpunit.yaml
 ```
 
 ```
@@ -68,19 +68,19 @@ Summary: 3 passed
 ### 1. Install
 
 ```bash
-npm install @shreyasgurav/mcptest --save-dev
+npm install @shreyasgurav/mcpunit --save-dev
 ```
 
 ### 2. Create a test file
 
 ```bash
-npx @shreyasgurav/mcptest init
+npx @shreyasgurav/mcpunit init
 ```
 
-This creates a `mcptest.yaml` starter. Or write your own:
+This creates a `mcpunit.yaml` starter. Or write your own:
 
 ```yaml
-# mcptest.yaml
+# mcpunit.yaml
 name: my-mcp-tests
 
 server:
@@ -110,37 +110,37 @@ tests:
 ### 3. Run
 
 ```bash
-npx @shreyasgurav/mcptest run
+npx @shreyasgurav/mcpunit run
 ```
 
 That's it. Three commands. Zero boilerplate.
 
 ## Commands
 
-### `mcptest run [path]`
+### `mcpunit run [path]`
 
 Run test suites against your MCP server.
 
 ```bash
-npx @shreyasgurav/mcptest run                          # Auto-discover *.mcptest.yaml files
-npx @shreyasgurav/mcptest run tests/                   # Run all suites in a directory
-npx @shreyasgurav/mcptest run my-tests.mcptest.yaml    # Run a specific file
-npx @shreyasgurav/mcptest run --bail                   # Stop on first failure
-npx @shreyasgurav/mcptest run -f json                  # JSON output for CI parsing
-npx @shreyasgurav/mcptest run -f html                  # Generate HTML report and open in browser
-npx @shreyasgurav/mcptest run --update-snapshots       # Overwrite/update saved snapshots
-npx @shreyasgurav/mcptest run -t 30000                 # 30s timeout per test
-npx @shreyasgurav/mcptest run --watch                  # Watch mode — reruns on file changes
+npx @shreyasgurav/mcpunit run                          # Auto-discover *.mcpunit.yaml files
+npx @shreyasgurav/mcpunit run tests/                   # Run all suites in a directory
+npx @shreyasgurav/mcpunit run my-tests.mcpunit.yaml    # Run a specific file
+npx @shreyasgurav/mcpunit run --bail                   # Stop on first failure
+npx @shreyasgurav/mcpunit run -f json                  # JSON output for CI parsing
+npx @shreyasgurav/mcpunit run -f html                  # Generate HTML report and open in browser
+npx @shreyasgurav/mcpunit run --update-snapshots       # Overwrite/update saved snapshots
+npx @shreyasgurav/mcpunit run -t 30000                 # 30s timeout per test
+npx @shreyasgurav/mcpunit run --watch                  # Watch mode — reruns on file changes
 ```
 
-### `mcptest list`
+### `mcpunit list`
 
 Inspect your MCP server — lists all tools with their descriptions in a formatted table. Great for exploring an unfamiliar server before writing tests.
 
 ```bash
-npx @shreyasgurav/mcptest list                                   # Uses mcptest.yaml in cwd
-npx @shreyasgurav/mcptest list --command node --args server.js   # Inline
-npx @shreyasgurav/mcptest list --url http://localhost:3000/mcp --transport http
+npx @shreyasgurav/mcpunit list                                   # Uses mcpunit.yaml in cwd
+npx @shreyasgurav/mcpunit list --command node --args server.js   # Inline
+npx @shreyasgurav/mcpunit list --url http://localhost:3000/mcp --transport http
 ```
 
 ```
@@ -155,15 +155,15 @@ npx @shreyasgurav/mcptest list --url http://localhost:3000/mcp --transport http
   └──────────┴──────────────────────────────────────────────────────────────┘
 ```
 
-### `mcptest validate`
+### `mcpunit validate`
 
 Validate your MCP server against spec conventions — tool naming, descriptions, input schemas.
 
 ```bash
-npx @shreyasgurav/mcptest validate                                # Uses mcptest.yaml in cwd
-npx @shreyasgurav/mcptest validate --config my-config.yaml        # Specific config
-npx @shreyasgurav/mcptest validate --command node --args server.js # Inline
-npx @shreyasgurav/mcptest validate --url http://localhost:3000/mcp --transport http
+npx @shreyasgurav/mcpunit validate                                # Uses mcpunit.yaml in cwd
+npx @shreyasgurav/mcpunit validate --config my-config.yaml        # Specific config
+npx @shreyasgurav/mcpunit validate --command node --args server.js # Inline
+npx @shreyasgurav/mcpunit validate --url http://localhost:3000/mcp --transport http
 ```
 
 ```
@@ -173,43 +173,43 @@ npx @shreyasgurav/mcptest validate --url http://localhost:3000/mcp --transport h
   ✓ No issues found. Server looks good!
 ```
 
-### `mcptest init`
+### `mcpunit init`
 
-Scaffold a starter `mcptest.yaml` config file.
+Scaffold a starter `mcpunit.yaml` config file.
 
 ```bash
-npx @shreyasgurav/mcptest init
-npx @shreyasgurav/mcptest init -o tests/api.mcptest.yaml
+npx @shreyasgurav/mcpunit init
+npx @shreyasgurav/mcpunit init -o tests/api.mcpunit.yaml
 ```
 
-### `mcptest generate`
+### `mcpunit generate`
 
-AI-generate a complete test suite (`mcptest.yaml`) from your server's tool schemas. It connects to the server, queries its available tools, sends the schemas to Claude, and writes out a fully defined test suite.
+AI-generate a complete test suite (`mcpunit.yaml`) from your server's tool schemas. It connects to the server, queries its available tools, sends the schemas to Claude, and writes out a fully defined test suite.
 
 ```bash
 # Set your Anthropic API Key
 export ANTHROPIC_API_KEY="your-key"
 
-npx @shreyasgurav/mcptest generate --command node --args server.js
-npx @shreyasgurav/mcptest generate --url http://localhost:3000/mcp --transport http
-npx @shreyasgurav/mcptest generate -c my-config.yaml -o tests/generated.mcptest.yaml
+npx @shreyasgurav/mcpunit generate --command node --args server.js
+npx @shreyasgurav/mcpunit generate --url http://localhost:3000/mcp --transport http
+npx @shreyasgurav/mcpunit generate -c my-config.yaml -o tests/generated.mcpunit.yaml
 ```
 
-### `mcptest diff`
+### `mcpunit diff`
 
 Compare two server versions (e.g., your production/main vs local development branch) by running the same test suite inputs against both and displaying a structural diff of the outputs.
 
 ```bash
-npx @shreyasgurav/mcptest diff \
+npx @shreyasgurav/mcpunit diff \
   --server-a "node ./dist-v1/index.js" \
   --server-b "node ./dist-v2/index.js" \
-  --suite my-tests.mcptest.yaml
+  --suite my-tests.mcpunit.yaml
 ```
 
 
 ## Test File Format
 
-mcptest supports YAML (`.yaml`, `.yml`) and JSON (`.json`) test files.
+mcpunit supports YAML (`.yaml`, `.yml`) and JSON (`.json`) test files.
 
 ### Server Configuration
 
@@ -350,10 +350,10 @@ tests:
 
 ### Watch Mode
 
-Keep a terminal open while developing — mcptest reruns your suite automatically whenever you change a `.js`, `.ts`, `.yaml`, or `.json` file:
+Keep a terminal open while developing — mcpunit reruns your suite automatically whenever you change a `.js`, `.ts`, `.yaml`, or `.json` file:
 
 ```bash
-npx @shreyasgurav/mcptest run --watch
+npx @shreyasgurav/mcpunit run --watch
 ```
 
 ### Snapshot Testing
@@ -369,13 +369,13 @@ tests:
       snapshot: true
 ```
 
-1. **First Run**: Creates a new snapshot file under `.mcptest/snapshots/user_profile_stable_response.json` containing the tool's actual output.
+1. **First Run**: Creates a new snapshot file under `.mcpunit/snapshots/user_profile_stable_response.json` containing the tool's actual output.
 2. **Subsequent Runs**: Compares the tool's output against the saved file and reports mismatches.
-3. **Updating**: Run with `mcptest run --update-snapshots` to overwrite existing snapshot files with the new responses.
+3. **Updating**: Run with `mcpunit run --update-snapshots` to overwrite existing snapshot files with the new responses.
 
 ### Resource & Prompt Testing
 
-In addition to tools, `mcptest` can test MCP **resources** and **prompts**.
+In addition to tools, `mcpunit` can test MCP **resources** and **prompts**.
 
 #### Resource Testing
 Define a `resources` block in your test suite to fetch and inspect resource contents.
@@ -417,20 +417,20 @@ jobs:
         with:
           node-version: "20"
       - run: npm ci
-      - run: npx @shreyasgurav/mcptest run
-      - run: npx @shreyasgurav/mcptest validate
+      - run: npx @shreyasgurav/mcpunit run
+      - run: npx @shreyasgurav/mcpunit validate
 ```
 
-mcptest exits with code `1` when any test fails — CI pipelines pick this up automatically.
+mcpunit exits with code `1` when any test fails — CI pipelines pick this up automatically.
 
 ## Programmatic API
 
-Use mcptest as a library for custom test runners:
+Use mcpunit as a library for custom test runners:
 
 ```typescript
-import { McpTestClient, loadSuite, runSuite } from "@shreyasgurav/mcptest";
+import { McpUnitClient, loadSuite, runSuite } from "@shreyasgurav/mcpunit";
 
-const suite = loadSuite("./tests/my-server.mcptest.yaml");
+const suite = loadSuite("./tests/my-server.mcpunit.yaml");
 const result = await runSuite(suite, {
   bail: false,
   onResult: (r) => console.log(r.name, r.status),
@@ -441,13 +441,13 @@ console.log(`${result.passed} passed, ${result.failed} failed`);
 
 ## File Discovery
 
-mcptest auto-discovers test files by scanning for:
+mcpunit auto-discovers test files by scanning for:
 
-- `*.mcptest.yaml` / `*.mcptest.yml` / `*.mcptest.json`
+- `*.mcpunit.yaml` / `*.mcpunit.yml` / `*.mcpunit.json`
 - `*.test.yaml` / `*.test.yml`
-- Any YAML/JSON file with "mcptest" in the name
+- Any YAML/JSON file with "mcpunit" in the name
 
-Just run `mcptest run` in your project root and it finds everything.
+Just run `mcpunit run` in your project root and it finds everything.
 
 ## Supported Transports
 
@@ -460,11 +460,11 @@ Just run `mcptest run` in your project root and it finds everything.
 ## Contributing
 
 ```bash
-git clone https://github.com/shreyasgurav/mcptest.git
-cd mcptest
+git clone https://github.com/shreyasgurav/mcpunit.git
+cd mcpunit
 npm install
 npm run build
-node dist/cli.js run examples/echo.mcptest.yaml
+node dist/cli.js run examples/echo.mcpunit.yaml
 node dist/cli.js list --command node --args examples/echo-server.mjs
 ```
 

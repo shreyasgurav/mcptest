@@ -1,4 +1,4 @@
-# mcptest — suite for testing hooks and retries
+# mcpunit — suite for testing hooks and retries
 name: hook-and-retry-tests
 
 server:

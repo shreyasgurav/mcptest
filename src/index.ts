@@ -1,7 +1,7 @@
 /**
- * mcptest — public API.
+ * mcpunit — public API.
  *
- * Re-exports everything a consumer might need when using mcptest
+ * Re-exports everything a consumer might need when using mcpunit
  * programmatically (e.g. from a custom script rather than the CLI).
  */
 
@@ -21,7 +21,7 @@ export type {
 } from "./types.js";
 
 // Core modules
-export { McpTestClient } from "./core/client.js";
+export { McpUnitClient } from "./core/client.js";
 export type { ToolInfo, ToolCallResult, ResourceResult, PromptResult } from "./core/client.js";
 
 export { evaluate, evaluateResource, evaluatePrompt, evaluateSnapshot, deepEqual } from "./core/assertions.js";
@@ -51,3 +51,7 @@ export { generateHtmlReport, writeHtmlReport } from "./core/html-reporter.js";
 export { diffServers } from "./core/differ.js";
 export type { DiffResult, DiffChange } from "./core/differ.js";
 export { checkSnapshot } from "./core/snapshots.js";
+
+// Monitor & Dashboard
+export { startMonitor, parseInterval, loadHistory, calculateUptime } from "./core/monitor.js";
+export { startDashboard, buildDashboardHtml } from "./core/dashboard.js";

@@ -4,7 +4,7 @@
  * and validates them against the MCP specification.
  */
 
-import { McpTestClient } from "./client.js";
+import { McpUnitClient } from "./client.js";
 import type { ServerConfig } from "../types.js";
 import pc from "picocolors";
 
@@ -30,7 +30,7 @@ export interface ValidationReport {
 export async function validateServer(
   server: ServerConfig
 ): Promise<ValidationReport> {
-  const client = new McpTestClient(server);
+  const client = new McpUnitClient(server);
   const issues: ValidationIssue[] = [];
   let tools = 0;
   let resources = 0;

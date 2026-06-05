@@ -41,7 +41,7 @@ export interface PromptResult {
  * Thin wrapper around the official MCP SDK client that handles transport
  * selection, connection lifecycle and result normalization.
  */
-export class McpTestClient {
+export class McpUnitClient {
   private client: Client;
   private transport?: Transport;
   private connected = false;
@@ -49,7 +49,7 @@ export class McpTestClient {
 
   constructor(private readonly server: ServerConfig) {
     this.client = new Client(
-      { name: "mcptest", version: "0.1.0" },
+      { name: "mcpunit", version: "0.1.0" },
       { capabilities: {} }
     );
   }

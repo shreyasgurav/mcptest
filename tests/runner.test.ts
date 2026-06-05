@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { runSuite } from "../src/core/runner.js";
-import { McpTestClient } from "../src/core/client.js";
+import { McpUnitClient } from "../src/core/client.js";
 import type { TestSuite } from "../src/types.js";
 
-// Mock McpTestClient
+// Mock McpUnitClient
 vi.mock("../src/core/client.js", () => {
   return {
-    McpTestClient: vi.fn().mockImplementation(() => {
+    McpUnitClient: vi.fn().mockImplementation(() => {
       return {
         connect: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -31,7 +31,7 @@ describe("runSuite", () => {
       readResource: vi.fn().mockResolvedValue({ uri: "", text: "resource content" }),
       getPrompt: vi.fn().mockResolvedValue({ text: "prompt content", messages: [] }),
     };
-    vi.mocked(McpTestClient).mockImplementation(() => mockClient);
+    vi.mocked(McpUnitClient).mockImplementation(() => mockClient);
   });
 
   it("runs a simple test suite successfully", async () => {

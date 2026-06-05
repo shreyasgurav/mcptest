@@ -17,7 +17,7 @@ afterEach(() => {
 
 describe("loadSuite", () => {
   it("loads a valid YAML suite", () => {
-    const file = join(TMP_DIR, "test.mcptest.yaml");
+    const file = join(TMP_DIR, "test.mcpunit.yaml");
     writeFileSync(
       file,
       `
@@ -46,7 +46,7 @@ tests:
   });
 
   it("loads a valid JSON suite", () => {
-    const file = join(TMP_DIR, "test.mcptest.json");
+    const file = join(TMP_DIR, "test.mcpunit.json");
     writeFileSync(
       file,
       JSON.stringify({
@@ -63,19 +63,19 @@ tests:
   });
 
   it("throws on missing server", () => {
-    const file = join(TMP_DIR, "bad.mcptest.yaml");
+    const file = join(TMP_DIR, "bad.mcpunit.yaml");
     writeFileSync(file, "name: bad\ntests:\n  - tool: x\n", "utf8");
     expect(() => loadSuite(file)).toThrow("missing required \"server\" config");
   });
 
   it("throws on missing tests array", () => {
-    const file = join(TMP_DIR, "bad2.mcptest.yaml");
+    const file = join(TMP_DIR, "bad2.mcpunit.yaml");
     writeFileSync(file, "name: bad2\nserver:\n  command: node\n", "utf8");
     expect(() => loadSuite(file)).toThrow('"tests" must be an array');
   });
 
   it("throws on invalid test (missing tool)", () => {
-    const file = join(TMP_DIR, "bad3.mcptest.yaml");
+    const file = join(TMP_DIR, "bad3.mcpunit.yaml");
     writeFileSync(
       file,
       "server:\n  command: node\ntests:\n  - name: no tool\n",
@@ -85,7 +85,7 @@ tests:
   });
 
   it("validates hooks", () => {
-    const file = join(TMP_DIR, "hooks.mcptest.yaml");
+    const file = join(TMP_DIR, "hooks.mcpunit.yaml");
     writeFileSync(
       file,
       `
@@ -113,7 +113,7 @@ after:
   });
 
   it("throws on invalid hook (not an array)", () => {
-    const file = join(TMP_DIR, "bad-hooks.mcptest.yaml");
+    const file = join(TMP_DIR, "bad-hooks.mcpunit.yaml");
     writeFileSync(
       file,
       "server:\n  command: node\nbefore: not_an_array\ntests:\n  - tool: x\n",
@@ -123,7 +123,7 @@ after:
   });
 
   it("validates retry fields", () => {
-    const file = join(TMP_DIR, "retry.mcptest.yaml");
+    const file = join(TMP_DIR, "retry.mcpunit.yaml");
     writeFileSync(
       file,
       `
@@ -139,7 +139,7 @@ tests:
   });
 
   it("loads resources array", () => {
-    const file = join(TMP_DIR, "resources.mcptest.yaml");
+    const file = join(TMP_DIR, "resources.mcpunit.yaml");
     writeFileSync(
       file,
       `
@@ -162,7 +162,7 @@ resources:
   });
 
   it("throws on resource without uri", () => {
-    const file = join(TMP_DIR, "bad-resource.mcptest.yaml");
+    const file = join(TMP_DIR, "bad-resource.mcpunit.yaml");
     writeFileSync(
       file,
       `
@@ -179,7 +179,7 @@ resources:
   });
 
   it("loads prompts array", () => {
-    const file = join(TMP_DIR, "prompts.mcptest.yaml");
+    const file = join(TMP_DIR, "prompts.mcpunit.yaml");
     writeFileSync(
       file,
       `
@@ -204,7 +204,7 @@ prompts:
   });
 
   it("throws on prompt without prompt name", () => {
-    const file = join(TMP_DIR, "bad-prompt.mcptest.yaml");
+    const file = join(TMP_DIR, "bad-prompt.mcpunit.yaml");
     writeFileSync(
       file,
       `
@@ -223,28 +223,28 @@ prompts:
 
 describe("discoverSuiteFiles", () => {
   it("returns the file itself if given a file path", () => {
-    const file = join(TMP_DIR, "single.mcptest.yaml");
+    const file = join(TMP_DIR, "single.mcpunit.yaml");
     writeFileSync(file, "server:\n  command: node\ntests:\n  - tool: x\n", "utf8");
     const files = discoverSuiteFiles(file);
     expect(files).toHaveLength(1);
     expect(files[0]).toBe(resolve(file));
   });
 
-  it("discovers mcptest files in a directory", () => {
-    writeFileSync(join(TMP_DIR, "a.mcptest.yaml"), "x", "utf8");
-    writeFileSync(join(TMP_DIR, "b.mcptest.yml"), "x", "utf8");
+  it("discovers mcpunit files in a directory", () => {
+    writeFileSync(join(TMP_DIR, "a.mcpunit.yaml"), "x", "utf8");
+    writeFileSync(join(TMP_DIR, "b.mcpunit.yml"), "x", "utf8");
     writeFileSync(join(TMP_DIR, "readme.md"), "x", "utf8"); // should be ignored
 
     const files = discoverSuiteFiles(TMP_DIR);
     expect(files).toHaveLength(2);
-    expect(files.every((f) => f.includes("mcptest"))).toBe(true);
+    expect(files.every((f) => f.includes("mcpunit"))).toBe(true);
   });
 
   it("ignores node_modules and dotfiles", () => {
     mkdirSync(join(TMP_DIR, "node_modules"), { recursive: true });
-    writeFileSync(join(TMP_DIR, "node_modules", "test.mcptest.yaml"), "x", "utf8");
+    writeFileSync(join(TMP_DIR, "node_modules", "test.mcpunit.yaml"), "x", "utf8");
     mkdirSync(join(TMP_DIR, ".hidden"), { recursive: true });
-    writeFileSync(join(TMP_DIR, ".hidden", "test.mcptest.yaml"), "x", "utf8");
+    writeFileSync(join(TMP_DIR, ".hidden", "test.mcpunit.yaml"), "x", "utf8");
 
     const files = discoverSuiteFiles(TMP_DIR);
     expect(files).toHaveLength(0);

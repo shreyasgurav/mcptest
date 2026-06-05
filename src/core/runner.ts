@@ -7,7 +7,7 @@ import type {
   ResourceTestCase,
   PromptTestCase,
 } from "../types.js";
-import { McpTestClient } from "./client.js";
+import { McpUnitClient } from "./client.js";
 import { evaluate, evaluateSnapshot, evaluateResource, evaluatePrompt } from "./assertions.js";
 import type { EvaluateOptions } from "./assertions.js";
 import pc from "picocolors";
@@ -25,7 +25,7 @@ export interface RunOptions {
 
 /** Helper to run a list of hook actions sequentially. */
 async function runHooks(
-  client: McpTestClient,
+  client: McpUnitClient,
   hooks: HookAction[] | undefined,
   defaultTimeout: number
 ): Promise<void> {
@@ -48,7 +48,7 @@ export async function runSuite(
 ): Promise<SuiteResult> {
   const start = Date.now();
   const results: TestResult[] = [];
-  const client = new McpTestClient(suite.server);
+  const client = new McpUnitClient(suite.server);
   const evalOpts: EvaluateOptions = { updateSnapshots: options.updateSnapshots };
 
   let connectError: string | undefined;
@@ -155,7 +155,7 @@ export async function runSuite(
 }
 
 async function runTest(
-  client: McpTestClient,
+  client: McpUnitClient,
   test: TestCase,
   defaultTimeout: number,
   evalOpts: EvaluateOptions
@@ -264,7 +264,7 @@ async function runTest(
 }
 
 async function runResourceTest(
-  client: McpTestClient,
+  client: McpUnitClient,
   test: ResourceTestCase,
   defaultTimeout: number
 ): Promise<TestResult> {
@@ -299,7 +299,7 @@ async function runResourceTest(
 }
 
 async function runPromptTest(
-  client: McpTestClient,
+  client: McpUnitClient,
   test: PromptTestCase,
   defaultTimeout: number
 ): Promise<TestResult> {

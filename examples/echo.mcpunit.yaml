@@ -1,4 +1,4 @@
-# mcptest — echo-server test suite
+# mcpunit — echo-server test suite
 # Tests the example echo MCP server
 
 name: echo-server-tests
@@ -15,9 +15,9 @@ tests:
   - name: Echo returns the input
     tool: echo
     input:
-      message: "hello mcptest"
+      message: "hello mcpunit"
     expect:
-      text: "hello mcptest"
+      text: "hello mcpunit"
 
   - name: Echo contains substring
     tool: echo
@@ -50,7 +50,7 @@ tests:
       name: "Shreyas"
     expect:
       contains: "Hello, Shreyas"
-      matches: "Welcome to mcptest"
+      matches: "Welcome to mcpunit"
 
   - name: Get server info returns valid JSON
     tool: get_info

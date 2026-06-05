@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { checkSnapshot } from "../src/core/snapshots.js";
 
 describe("snapshots", () => {
-  const snapshotDir = ".mcptest/snapshots";
+  const snapshotDir = ".mcpunit/snapshots";
 
   beforeEach(() => {
     // clean up snapshot dir if it exists

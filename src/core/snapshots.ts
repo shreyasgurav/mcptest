@@ -1,5 +1,5 @@
 /**
- * Snapshot testing for mcptest.
+ * Snapshot testing for mcpunit.
  *
  * First run saves the response; subsequent runs compare against it.
  * Use `--update-snapshots` to overwrite saved snapshots.
@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 import type { AssertionResult } from "../types.js";
 
-const SNAPSHOT_DIR = ".mcptest/snapshots";
+const SNAPSHOT_DIR = ".mcpunit/snapshots";
 
 /**
  * Sanitize a test name into a safe filesystem key.

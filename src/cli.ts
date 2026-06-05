@@ -1,10 +1,10 @@
 /**
- * mcptest CLI
+ * mcpunit CLI
  *
  * Commands:
  *   run [path]        Run test suites against MCP servers
  *   validate [path]   Validate an MCP server against spec conventions
- *   init              Generate a starter mcptest config file
+ *   init              Generate a starter mcpunit config file
  *   list              List tools exposed by the MCP server
  *   generate          AI-generate a test suite from tool schemas
  *   diff              Compare two server versions side by side
@@ -33,10 +33,11 @@ import { writeHtmlReport } from "./core/html-reporter.js";
 import { diffServers } from "./core/differ.js";
 import type { ReporterFormat } from "./core/reporter.js";
 import type { ServerConfig } from "./types.js";
-import { McpTestClient } from "./core/client.js";
+import { McpUnitClient } from "./core/client.js";
 import type { ToolInfo } from "./core/client.js";
 
-const pkg = { name: "mcptest", version: "0.3.0" };
+const pkg = { name: "mcpunit", version: "0.4.0" };
+
 
 const program = new Command()
   .name(pkg.name)
@@ -96,7 +97,7 @@ program
         process.stdout.write('\x1Bc'); // clear terminal
         console.log("");
         console.log(
-          pc.bold(pc.magenta("  mcptest")) + pc.dim(" v" + pkg.version) + pc.cyan(" (Watch Mode)")
+          pc.bold(pc.magenta("  mcpunit")) + pc.dim(" v" + pkg.version) + pc.cyan(" (Watch Mode)")
         );
         console.log(pc.dim("  ─────────────────────────────────"));
         console.log(pc.yellow("  Press Ctrl+C to exit"));
@@ -170,7 +171,7 @@ program
     if (isPretty) {
       console.log("");
       console.log(
-        pc.bold(pc.magenta("  mcptest")) + pc.dim(" v" + pkg.version)
+        pc.bold(pc.magenta("  mcpunit")) + pc.dim(" v" + pkg.version)
       );
       console.log(pc.dim("  ─────────────────────────────────"));
     }
@@ -181,7 +182,7 @@ program
         console.log("");
         console.log(
           pc.yellow(
-            "  No test suites found. Create a *.mcptest.yaml file or run `mcptest init`."
+            "  No test suites found. Create a *.mcpunit.yaml file or run `mcpunit init`."
           )
         );
         console.log("");
@@ -226,7 +227,7 @@ program
       const code = reportJson(allResults);
       process.exit(code);
     } else if (format === "html") {
-      const outputPath = writeHtmlReport(allResults, "mcptest-report.html");
+      const outputPath = writeHtmlReport(allResults, "mcpunit-report.html");
       console.log("");
       console.log(pc.green(`  ✓ HTML report written to ${outputPath}`));
       console.log(pc.dim(`    Open in browser to view results.`));
@@ -253,7 +254,7 @@ program
   .description("Validate an MCP server against specification conventions")
   .option(
     "-c, --config <file>",
-    "Path to mcptest config (YAML/JSON) containing server config"
+    "Path to mcpunit config (YAML/JSON) containing server config"
   )
   .option("--command <cmd>", "Server command to spawn (stdio)")
   .option("--args <args>", "Server command arguments (comma-separated)")
@@ -297,7 +298,7 @@ program
   .description("List all tools exposed by the MCP server")
   .option(
     "-c, --config <file>",
-    "Path to mcptest config (YAML/JSON) containing server config"
+    "Path to mcpunit config (YAML/JSON) containing server config"
   )
   .option("--command <cmd>", "Server command to spawn (stdio)")
   .option("--args <args>", "Server command arguments (comma-separated)")
@@ -320,7 +321,7 @@ program
     headers?: string;
   }) => {
     const server = resolveServerConfig(opts);
-    const client = new McpTestClient(server);
+    const client = new McpUnitClient(server);
     try {
       console.log(pc.dim("\n  Connecting to MCP server..."));
       await client.connect();
@@ -339,7 +340,7 @@ program
   .command("generate")
   .description("AI-generate a test suite from your server's tool schemas")
   .option("--api-key <key>", "Anthropic/OpenAI API key (or set ANTHROPIC_API_KEY / OPENAI_API_KEY env)")
-  .option("-o, --output <file>", "Output file", "mcptest.yaml")
+  .option("-o, --output <file>", "Output file", "mcpunit.yaml")
   .option("--command <cmd>", "Server command to spawn (stdio)")
   .option("--args <args>", "Server command arguments (comma-separated)")
   .option("--url <url>", "Server URL (http/sse transport)")
@@ -382,7 +383,7 @@ program
       writeFileSync(outputPath, yaml, "utf8");
 
       spinner.succeed(pc.green(`  Generated ${opts.output}`));
-      console.log(pc.dim(`  Run: mcptest run ${opts.output}`));
+      console.log(pc.dim(`  Run: mcpunit run ${opts.output}`));
       console.log("");
     } catch (err) {
       spinner.fail(pc.red(`  Failed: ${(err as Error).message}`));
@@ -422,7 +423,7 @@ program
 
     console.log("");
     console.log(
-      pc.bold(pc.magenta("  mcptest diff")) + pc.dim(" v" + pkg.version)
+      pc.bold(pc.magenta("  mcpunit diff")) + pc.dim(" v" + pkg.version)
     );
     console.log(pc.dim("  ─────────────────────────────────"));
     console.log(pc.dim(`  A: ${opts.serverA}`));
@@ -491,11 +492,11 @@ program
 // ─── init ──────────────────────────────────────────────────────────
 program
   .command("init")
-  .description("Generate a starter mcptest.yaml config file")
+  .description("Generate a starter mcpunit.yaml config file")
   .option(
     "-o, --output <file>",
     "Output file name",
-    "mcptest.yaml"
+    "mcpunit.yaml"
   )
   .action((opts: { output: string }) => {
     const dest = resolve(opts.output);
@@ -504,8 +505,8 @@ program
       process.exit(0);
     }
 
-    const template = `# mcptest — Test suite for your MCP server
-# Docs: https://github.com/shreyasgurav/mcptest
+    const template = `# mcpunit — Test suite for your MCP server
+# Docs: https://github.com/shreyasgurav/mcpunit
 
 name: my-mcp-server-tests
 
@@ -567,7 +568,7 @@ tests:
 #   - name: readme resource
 #     uri: "file:///README.md"
 #     expect:
-#       contains: "mcptest"
+#       contains: "mcpunit"
 
 # prompts:
 #   - name: summarize prompt
@@ -584,7 +585,7 @@ tests:
       pc.green(`  ✓ Created ${basename(dest)}`)
     );
     console.log(
-      pc.dim(`    Edit the file, then run: mcptest run`)
+      pc.dim(`    Edit the file, then run: mcpunit run`)
     );
     console.log("");
   });
@@ -633,7 +634,7 @@ function resolveServerConfig(opts: {
       headers: Object.keys(headers).length > 0 ? headers : undefined,
     };
   } else {
-    const candidates = ["mcptest.yaml", "mcptest.yml", "mcptest.json"];
+    const candidates = ["mcpunit.yaml", "mcpunit.yml", "mcpunit.json"];
     let found: string | undefined;
     for (const c of candidates) {
       if (existsSync(resolve(c))) {
@@ -648,7 +649,7 @@ function resolveServerConfig(opts: {
     } else {
       console.error(
         pc.red(
-          'No server specified. Use --command, --url, or --config, or create a mcptest.yaml.'
+          'No server specified. Use --command, --url, or --config, or create a mcpunit.yaml.'
         )
       );
       process.exit(1);
@@ -720,5 +721,70 @@ function printToolsTable(tools: ToolInfo[]) {
   console.log(pc.dim(borderBottom));
   console.log("");
 }
+
+// ─── monitor ────────────────────────────────────────────────────────
+program
+  .command("monitor")
+  .description("Continuously run tests on a schedule and alert on failures")
+  .argument("[path]", "Test file", "mcpunit.yaml")
+  .option("-i, --interval <interval>", "Run interval (e.g. 30s, 5m, 1h)", "15m")
+  .option("--alert-slack <url>", "Slack webhook URL for failure alerts")
+  .option("--alert-webhook <url>", "Generic webhook URL for alerts")
+  .option("--dashboard", "Start web dashboard alongside monitor", false)
+  .option("-p, --port <port>", "Dashboard port", "3847")
+  .action(async (path: string, opts: { interval: string; alertSlack?: string; alertWebhook?: string; dashboard: boolean; port: string }) => {
+    const { startMonitor, parseInterval } = await import("./core/monitor.js");
+    
+    // Discover suite
+    const files = discoverSuiteFiles(path);
+    if (files.length === 0) {
+      console.error(pc.red(`  Error: No test suite found at ${path}`));
+      process.exit(1);
+    }
+    const file = files[0]; // monitor runs one suite
+    const suite = loadSuite(file);
+    
+    await startMonitor(suite, {
+      intervalMs: parseInterval(opts.interval),
+      alertSlack: opts.alertSlack,
+      alertWebhook: opts.alertWebhook,
+      dashboard: opts.dashboard,
+      port: parseInt(opts.port, 10)
+    });
+  });
+
+// ─── dashboard ──────────────────────────────────────────────────────
+program
+  .command("dashboard")
+  .description("Start the mcpunit web dashboard")
+  .option("-p, --port <port>", "Dashboard port", "3847")
+  .option("--suite <file>", "Specific test suite file history to show")
+  .option("--open", "Auto-open browser", false)
+  .action(async (opts: { port: string; suite?: string; open: boolean }) => {
+    const { startDashboard } = await import("./core/dashboard.js");
+    const { loadHistory } = await import("./core/monitor.js");
+    const port = parseInt(opts.port, 10);
+    
+    console.log("");
+    console.log(pc.bold(pc.magenta("  mcpunit dashboard")));
+    console.log(pc.dim("  ─────────────────────────────────"));
+    console.log(pc.dim(`  Dashboard: http://localhost:${port}`));
+    
+    if (opts.suite) {
+      console.log(pc.dim(`  Suite:     ${opts.suite}`));
+    }
+    
+    const hist = loadHistory(opts.suite);
+    console.log(pc.dim(`  History:   ${hist.length} runs loaded`));
+    console.log("");
+    console.log(pc.yellow("  Press Ctrl+C to stop."));
+    
+    try {
+      await startDashboard({ port, suiteFile: opts.suite, open: opts.open });
+    } catch (err) {
+      console.error(pc.red(`  Failed to start dashboard: ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
 
 program.parse();

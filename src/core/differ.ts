@@ -3,7 +3,7 @@
  * against the same test inputs.
  */
 
-import { McpTestClient } from "./client.js";
+import { McpUnitClient } from "./client.js";
 import type { ServerConfig } from "../types.js";
 import { loadSuite } from "./loader.js";
 
@@ -38,8 +38,8 @@ export async function diffServers(
   const suite = loadSuite(suiteFile);
   const timeout = suite.timeout ?? 15000;
 
-  const clientA = new McpTestClient(serverA);
-  const clientB = new McpTestClient(serverB);
+  const clientA = new McpUnitClient(serverA);
+  const clientB = new McpUnitClient(serverB);
 
   try {
     await clientA.connect();

@@ -9,7 +9,7 @@ const SUITE_EXTENSIONS = new Set([".yaml", ".yml", ".json"]);
 /**
  * Resolve a path (file or directory) into a list of test-suite file paths.
  * Directories are scanned recursively for *.yaml / *.yml / *.json files
- * whose name contains "mcptest" or that live under a directory named "tests".
+ * whose name contains "mcpunit" or that live under a directory named "tests".
  */
 export function discoverSuiteFiles(target: string): string[] {
   const abs = resolve(target);
@@ -37,10 +37,10 @@ function walk(dir: string, acc: string[]): void {
 function isLikelySuiteFile(name: string): boolean {
   const lower = name.toLowerCase();
   return (
-    lower.includes("mcptest") ||
-    lower.endsWith(".mcptest.yaml") ||
-    lower.endsWith(".mcptest.yml") ||
-    lower.endsWith(".mcptest.json") ||
+    lower.includes("mcpunit") ||
+    lower.endsWith(".mcpunit.yaml") ||
+    lower.endsWith(".mcpunit.yml") ||
+    lower.endsWith(".mcpunit.json") ||
     lower.endsWith(".test.yaml") ||
     lower.endsWith(".test.yml")
   );

@@ -2,23 +2,23 @@
  * AI-powered test suite generator.
  *
  * Connects to an MCP server, reads tool schemas via listTools(),
- * sends them to Claude, and returns a complete mcptest YAML test suite.
+ * sends them to Claude, and returns a complete mcpunit YAML test suite.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { McpTestClient } from "./client.js";
+import { McpUnitClient } from "./client.js";
 import type { ServerConfig } from "../types.js";
 
 /**
- * Generate a complete mcptest YAML test suite by introspecting a server's
+ * Generate a complete mcpunit YAML test suite by introspecting a server's
  * tool schemas and using Claude or GPT to produce realistic test cases.
  */
 export async function generateSuite(
   server: ServerConfig,
   apiKey: string
 ): Promise<string> {
-  const client = new McpTestClient(server);
+  const client = new McpUnitClient(server);
   await client.connect();
 
   const tools = await client.listTools();
@@ -36,7 +36,7 @@ export async function generateSuite(
   // Build the server config block for the YAML
   const serverBlock = buildServerBlock(server);
 
-  const promptContent = `You are an expert at writing mcptest YAML test suites for MCP (Model Context Protocol) servers.
+  const promptContent = `You are an expert at writing mcpunit YAML test suites for MCP (Model Context Protocol) servers.
 
 Here are the tools exposed by this MCP server:
 ${JSON.stringify(tools, null, 2)}
@@ -45,7 +45,7 @@ ${resources.length > 0 ? `Here are the resources:\n${JSON.stringify(resources, n
 
 ${prompts.length > 0 ? `Here are the prompts:\n${JSON.stringify(prompts, null, 2)}` : ""}
 
-Generate a complete mcptest YAML test suite that:
+Generate a complete mcpunit YAML test suite that:
 1. Tests each tool with realistic inputs derived from the input schemas
 2. Tests happy path (successful calls with valid inputs)
 3. Tests edge cases (empty strings, zero values, boundary conditions)

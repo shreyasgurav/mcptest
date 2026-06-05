@@ -1,6 +1,6 @@
 {
-  "name": "@shreyasgurav/mcptest",
-  "version": "0.3.3",
+  "name": "@shreyasgurav/mcpunit",
+  "version": "0.4.0",
   "description": "A declarative, CI-first testing framework for Model Context Protocol (MCP) servers. Like pytest/vitest, but for MCP.",
   "type": "module",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "automation"
   ],
   "bin": {
-    "mcptest": "./dist/cli.js"
+    "mcpunit": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",

@@ -1,13 +1,13 @@
-# Contributing to mcptest
+# Contributing to mcpunit
 
-We welcome contributions to mcptest! Whether you want to fix a bug, add a feature, or improve the documentation, this guide will help you get started.
+We welcome contributions to mcpunit! Whether you want to fix a bug, add a feature, or improve the documentation, this guide will help you get started.
 
 ## Development Setup
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/shreyasgurav/mcptest.git
-   cd mcptest
+   git clone https://github.com/shreyasgurav/mcpunit.git
+   cd mcpunit
    ```
 
 2. **Install dependencies:**
@@ -28,7 +28,7 @@ We welcome contributions to mcptest! Whether you want to fix a bug, add a featur
 4. **Verify it works:**
    Run the example integration tests against the included echo server:
    ```bash
-   node dist/cli.js run examples/echo.mcptest.yaml
+   node dist/cli.js run examples/echo.mcpunit.yaml
    ```
 
 ## Testing

@@ -1,7 +1,7 @@
 /**
  * echo-server.mjs
  *
- * A minimal MCP server with a handful of tools for dogfooding mcptest.
+ * A minimal MCP server with a handful of tools for dogfooding mcpunit.
  * Run with: node examples/echo-server.mjs
  */
 
@@ -43,7 +43,7 @@ server.tool(
   "Returns a greeting for the given name.",
   { name: z.string().describe("Name to greet") },
   async ({ name }) => ({
-    content: [{ type: "text", text: `Hello, ${name}! Welcome to mcptest.` }],
+    content: [{ type: "text", text: `Hello, ${name}! Welcome to mcpunit.` }],
   })
 );
 
