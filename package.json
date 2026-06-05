@@ -1,5 +1,5 @@
 {
-  "name": "@shreyasgurav/mcpunit",
+  "name": "mcpunit",
   "version": "0.4.0",
   "description": "A declarative, CI-first testing framework for Model Context Protocol (MCP) servers. Like pytest/vitest, but for MCP.",
   "type": "module",
