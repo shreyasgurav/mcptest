@@ -5,6 +5,9 @@
  *   run [path]        Run test suites against MCP servers
  *   validate [path]   Validate an MCP server against spec conventions
  *   init              Generate a starter mcptest config file
+ *   list              List tools exposed by the MCP server
+ *   generate          AI-generate a test suite from tool schemas
+ *   diff              Compare two server versions side by side
  */
 
 import { Command } from "commander";
@@ -25,12 +28,15 @@ import {
   validateServer,
   printValidationReport,
 } from "./core/validator.js";
+import { generateSuite } from "./core/generator.js";
+import { writeHtmlReport } from "./core/html-reporter.js";
+import { diffServers } from "./core/differ.js";
 import type { ReporterFormat } from "./core/reporter.js";
 import type { ServerConfig } from "./types.js";
 import { McpTestClient } from "./core/client.js";
 import type { ToolInfo } from "./core/client.js";
 
-const pkg = { name: "mcptest", version: "0.2.0" };
+const pkg = { name: "mcptest", version: "0.3.0" };
 
 const program = new Command()
   .name(pkg.name)
@@ -47,7 +53,7 @@ program
   .option("--bail", "Stop after the first failure", false)
   .option(
     "-f, --format <format>",
-    'Output format: "pretty" or "json"',
+    'Output format: "pretty", "json", or "html"',
     "pretty"
   )
   .option(
@@ -60,13 +66,18 @@ program
     "Watch for file changes and rerun tests automatically",
     false
   )
-  .action(async (path: string, opts: { bail: boolean; format: string; timeout: string; watch: boolean }) => {
+  .option(
+    "--update-snapshots",
+    "Update saved snapshots instead of comparing",
+    false
+  )
+  .action(async (path: string, opts: { bail: boolean; format: string; timeout: string; watch: boolean; updateSnapshots: boolean }) => {
     const format = opts.format as ReporterFormat;
     const isPretty = format === "pretty";
 
     if (opts.watch) {
-      if (format === "json") {
-        console.error(pc.red("  Error: --watch cannot be combined with json format."));
+      if (format !== "pretty") {
+        console.error(pc.red("  Error: --watch can only be used with pretty format."));
         process.exit(1);
       }
 
@@ -82,7 +93,7 @@ program
         }
         running = true;
 
-        console.clear();
+        process.stdout.write('\x1Bc'); // clear terminal
         console.log("");
         console.log(
           pc.bold(pc.magenta("  mcptest")) + pc.dim(" v" + pkg.version) + pc.cyan(" (Watch Mode)")
@@ -115,6 +126,7 @@ program
               const result = await runSuite(suite, {
                 bail: opts.bail,
                 onResult: reportTestLine,
+                updateSnapshots: opts.updateSnapshots,
               });
               allResults.push(result);
             }
@@ -204,6 +216,7 @@ program
       const result = await runSuite(suite, {
         bail: opts.bail,
         onResult: isPretty ? reportTestLine : undefined,
+        updateSnapshots: opts.updateSnapshots,
       });
 
       allResults.push(result);
@@ -211,6 +224,22 @@ program
 
     if (format === "json") {
       const code = reportJson(allResults);
+      process.exit(code);
+    } else if (format === "html") {
+      const outputPath = writeHtmlReport(allResults, "mcptest-report.html");
+      console.log("");
+      console.log(pc.green(`  ✓ HTML report written to ${outputPath}`));
+      console.log(pc.dim(`    Open in browser to view results.`));
+      console.log("");
+      // Also print summary to terminal
+      const code = reportSummary(allResults);
+      // Try to open in browser
+      try {
+        const { exec } = await import("node:child_process");
+        exec(`open "${outputPath}"`);
+      } catch {
+        // Silently ignore if open fails
+      }
       process.exit(code);
     } else {
       const code = reportSummary(allResults);
@@ -295,6 +324,155 @@ program
     }
   });
 
+// ─── generate ──────────────────────────────────────────────────────
+program
+  .command("generate")
+  .description("AI-generate a test suite from your server's tool schemas")
+  .option("--api-key <key>", "Anthropic API key (or set ANTHROPIC_API_KEY env)")
+  .option("-o, --output <file>", "Output file", "mcptest.yaml")
+  .option("--command <cmd>", "Server command to spawn (stdio)")
+  .option("--args <args>", "Server command arguments (comma-separated)")
+  .option("--url <url>", "Server URL (http/sse transport)")
+  .option(
+    "--transport <type>",
+    'Transport type: "stdio", "http", "sse"',
+    "stdio"
+  )
+  .option("-c, --config <file>", "Existing config file with server block")
+  .action(async (opts: {
+    apiKey?: string;
+    output: string;
+    command?: string;
+    args?: string;
+    url?: string;
+    transport?: string;
+    config?: string;
+  }) => {
+    const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      console.error(pc.red("  ✗ API key required. Use --api-key or set ANTHROPIC_API_KEY env variable."));
+      process.exit(1);
+    }
+
+    const server = resolveServerConfig(opts);
+    const ora = (await import("ora")).default;
+    const spinner = ora({ text: "  Connecting to server...", color: "cyan" }).start();
+
+    try {
+      spinner.text = "  Reading tool schemas...";
+      const yaml = await generateSuite(server, apiKey);
+
+      spinner.text = "  Writing test suite...";
+      const outputPath = resolve(opts.output);
+      writeFileSync(outputPath, yaml, "utf8");
+
+      spinner.succeed(pc.green(`  Generated ${opts.output}`));
+      console.log(pc.dim(`  Run: mcptest run ${opts.output}`));
+      console.log("");
+    } catch (err) {
+      spinner.fail(pc.red(`  Failed: ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+// ─── diff ──────────────────────────────────────────────────────────
+program
+  .command("diff")
+  .description("Compare responses from two server versions")
+  .requiredOption("--server-a <cmd>", "Command for server A (e.g. 'node ./dist-v1/index.js')")
+  .requiredOption("--server-b <cmd>", "Command for server B (e.g. 'node ./dist-v2/index.js')")
+  .requiredOption("--suite <file>", "Test suite file to use as inputs")
+  .option(
+    "--transport <type>",
+    'Transport type: "stdio", "http", "sse"',
+    "stdio"
+  )
+  .action(async (opts: {
+    serverA: string;
+    serverB: string;
+    suite: string;
+    transport: string;
+  }) => {
+    const parseServerCmd = (cmd: string): ServerConfig => {
+      const parts = cmd.trim().split(/\s+/);
+      return {
+        transport: opts.transport as ServerConfig["transport"],
+        command: parts[0],
+        args: parts.slice(1),
+      };
+    };
+
+    const serverA = parseServerCmd(opts.serverA);
+    const serverB = parseServerCmd(opts.serverB);
+
+    console.log("");
+    console.log(
+      pc.bold(pc.magenta("  mcptest diff")) + pc.dim(" v" + pkg.version)
+    );
+    console.log(pc.dim("  ─────────────────────────────────"));
+    console.log(pc.dim(`  A: ${opts.serverA}`));
+    console.log(pc.dim(`  B: ${opts.serverB}`));
+    console.log("");
+
+    try {
+      const results = await diffServers(opts.suite, serverA, serverB);
+
+      let changed = 0;
+      let identical = 0;
+
+      for (const result of results) {
+        if (result.errorA || result.errorB) {
+          console.log(`  ${pc.red("⚠")} ${pc.bold(result.testName)}`);
+          console.log(`    tool: ${pc.cyan(result.tool)}`);
+          if (result.errorA) console.log(`    ${pc.red(`A error: ${result.errorA}`)}`);
+          if (result.errorB) console.log(`    ${pc.red(`B error: ${result.errorB}`)}`);
+          console.log("");
+          changed++;
+          continue;
+        }
+
+        if (result.identical) {
+          console.log(`  ${pc.green("✓")} ${result.testName} ${pc.dim("(identical)")}`);
+          identical++;
+        } else {
+          console.log(`  ${pc.yellow("≠")} ${pc.bold(result.testName)}`);
+          console.log(`    tool: ${pc.cyan(result.tool)}`);
+          if (result.input) {
+            console.log(`    input: ${pc.dim(JSON.stringify(result.input))}`);
+          }
+          console.log("");
+          for (const change of result.changes) {
+            const prefix = change.type === "added" ? "+" : change.type === "removed" ? "-" : "~";
+            const color = change.type === "added" ? pc.green : change.type === "removed" ? pc.red : pc.yellow;
+            console.log(`    ${color(`${prefix} ${change.path}`)}`);
+            if (change.valueA !== undefined) {
+              console.log(`      ${pc.red("A:")} ${pc.dim(JSON.stringify(change.valueA))}`);
+            }
+            if (change.valueB !== undefined) {
+              console.log(`      ${pc.green("B:")} ${pc.dim(JSON.stringify(change.valueB))}`);
+            }
+          }
+          console.log("");
+          changed++;
+        }
+      }
+
+      console.log(pc.dim("  ─────────────────────────────────"));
+      console.log(
+        pc.bold("  Summary: ") +
+          (changed > 0 ? pc.yellow(`${changed} changed`) : "") +
+          (changed > 0 && identical > 0 ? pc.dim(", ") : "") +
+          (identical > 0 ? pc.green(`${identical} identical`) : "")
+      );
+      console.log("");
+
+      process.exit(changed > 0 ? 1 : 0);
+    } catch (err) {
+      console.error(pc.red(`  Failed: ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
+
 // ─── init ──────────────────────────────────────────────────────────
 program
   .command("init")
@@ -362,6 +540,27 @@ tests:
             type: number
           name:
             type: string
+
+  # - name: Snapshot test
+  #   tool: get_user
+  #   input:
+  #     id: 1
+  #   expect:
+  #     snapshot: true
+
+# resources:
+#   - name: readme resource
+#     uri: "file:///README.md"
+#     expect:
+#       contains: "mcptest"
+
+# prompts:
+#   - name: summarize prompt
+#     prompt: summarize
+#     args:
+#       content: "hello world"
+#     expect:
+#       contains: "hello"
 `;
 
     writeFileSync(dest, template, "utf8");

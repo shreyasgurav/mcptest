@@ -15,13 +15,17 @@ export type {
   AssertionResult,
   TestResult,
   SuiteResult,
+  ResourceTestCase,
+  PromptTestCase,
+  HookAction,
 } from "./types.js";
 
 // Core modules
 export { McpTestClient } from "./core/client.js";
-export type { ToolInfo, ToolCallResult } from "./core/client.js";
+export type { ToolInfo, ToolCallResult, ResourceResult, PromptResult } from "./core/client.js";
 
-export { evaluate, deepEqual } from "./core/assertions.js";
+export { evaluate, evaluateResource, evaluatePrompt, evaluateSnapshot, deepEqual } from "./core/assertions.js";
+export type { EvaluateOptions } from "./core/assertions.js";
 
 export { discoverSuiteFiles, loadSuite } from "./core/loader.js";
 
@@ -41,3 +45,9 @@ export {
   printValidationReport,
 } from "./core/validator.js";
 export type { ValidationIssue, ValidationReport } from "./core/validator.js";
+
+export { generateSuite } from "./core/generator.js";
+export { generateHtmlReport, writeHtmlReport } from "./core/html-reporter.js";
+export { diffServers } from "./core/differ.js";
+export type { DiffResult, DiffChange } from "./core/differ.js";
+export { checkSnapshot } from "./core/snapshots.js";

@@ -119,6 +119,12 @@ function validateSuite(data: unknown, filePath: string): TestSuite {
     }
   });
 
+  // Validate resources array
+  const resources = validateResourceTests(obj.resources, filePath);
+
+  // Validate prompts array
+  const prompts = validatePromptTests(obj.prompts, filePath);
+
   return {
     name:
       typeof obj.name === "string"
@@ -130,5 +136,51 @@ function validateSuite(data: unknown, filePath: string): TestSuite {
     filePath,
     before: before.length > 0 ? before : undefined,
     after: after.length > 0 ? after : undefined,
+    resources: resources.length > 0 ? resources : undefined,
+    prompts: prompts.length > 0 ? prompts : undefined,
   };
+}
+
+function validateResourceTests(
+  resources: unknown,
+  filePath: string
+): TestSuite["resources"] extends infer R ? NonNullable<R> : never {
+  if (resources === undefined) return [];
+  if (!Array.isArray(resources)) {
+    throw new Error(`${filePath}: "resources" must be an array.`);
+  }
+  resources.forEach((r, i) => {
+    if (typeof r !== "object" || r === null) {
+      throw new Error(`${filePath}: resources[${i}] must be an object.`);
+    }
+    const rObj = r as Record<string, unknown>;
+    if (typeof rObj.uri !== "string") {
+      throw new Error(`${filePath}: resources[${i}] requires a "uri".`);
+    }
+  });
+  return resources as TestSuite["resources"] extends infer R
+    ? NonNullable<R>
+    : never;
+}
+
+function validatePromptTests(
+  prompts: unknown,
+  filePath: string
+): TestSuite["prompts"] extends infer R ? NonNullable<R> : never {
+  if (prompts === undefined) return [];
+  if (!Array.isArray(prompts)) {
+    throw new Error(`${filePath}: "prompts" must be an array.`);
+  }
+  prompts.forEach((p, i) => {
+    if (typeof p !== "object" || p === null) {
+      throw new Error(`${filePath}: prompts[${i}] must be an object.`);
+    }
+    const pObj = p as Record<string, unknown>;
+    if (typeof pObj.prompt !== "string") {
+      throw new Error(`${filePath}: prompts[${i}] requires a "prompt" name.`);
+    }
+  });
+  return prompts as TestSuite["prompts"] extends infer R
+    ? NonNullable<R>
+    : never;
 }

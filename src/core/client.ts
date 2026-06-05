@@ -23,6 +23,20 @@ export interface ToolCallResult {
   structuredContent?: unknown;
 }
 
+/** Normalized result of reading a resource. */
+export interface ResourceResult {
+  uri: string;
+  mimeType?: string;
+  text: string;
+}
+
+/** Normalized result of getting a prompt. */
+export interface PromptResult {
+  description?: string;
+  text: string;
+  messages: unknown[];
+}
+
 /**
  * Thin wrapper around the official MCP SDK client that handles transport
  * selection, connection lifecycle and result normalization.
@@ -176,6 +190,53 @@ export class McpTestClient {
       text,
       content,
       structuredContent: raw.structuredContent,
+    };
+  }
+
+  /** Read a resource by URI. */
+  async readResource(
+    uri: string,
+    _timeoutMs: number
+  ): Promise<ResourceResult> {
+    const raw = await this.client.readResource(
+      { uri }
+    );
+
+    const contents = Array.isArray(raw.contents) ? raw.contents : [];
+    const first = contents[0] as
+      | { uri?: string; mimeType?: string; text?: string; blob?: string }
+      | undefined;
+
+    return {
+      uri,
+      mimeType: first?.mimeType,
+      text: first?.text ?? "",
+    };
+  }
+
+  /** Get a rendered prompt. */
+  async getPrompt(
+    name: string,
+    args: Record<string, string> | undefined,
+    _timeoutMs: number
+  ): Promise<PromptResult> {
+    const raw = await this.client.getPrompt(
+      { name, arguments: args ?? {} }
+    );
+
+    const messages = Array.isArray(raw.messages) ? raw.messages : [];
+    const text = messages
+      .map((m: unknown) => {
+        const msg = m as { content?: { type?: string; text?: string } };
+        return msg.content?.type === "text" ? msg.content.text ?? "" : "";
+      })
+      .filter(Boolean)
+      .join("\n");
+
+    return {
+      description: raw.description,
+      text,
+      messages,
     };
   }
 

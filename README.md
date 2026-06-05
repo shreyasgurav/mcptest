@@ -21,7 +21,7 @@ Write declarative test suites in YAML or JSON. Run them in CI. Get pass/fail exi
 ```bash
 npx @shreyasgurav/mcptest run
 
-  mcptest v0.2.0
+  mcptest v0.3.0
   ─────────────────────────────────
 
 ● my-server-tests
@@ -110,6 +110,8 @@ npx @shreyasgurav/mcptest run tests/                   # Run all suites in a dir
 npx @shreyasgurav/mcptest run my-tests.mcptest.yaml    # Run a specific file
 npx @shreyasgurav/mcptest run --bail                   # Stop on first failure
 npx @shreyasgurav/mcptest run -f json                  # JSON output for CI parsing
+npx @shreyasgurav/mcptest run -f html                  # Generate HTML report and open in browser
+npx @shreyasgurav/mcptest run --update-snapshots       # Overwrite/update saved snapshots
 npx @shreyasgurav/mcptest run -t 30000                 # 30s timeout per test
 npx @shreyasgurav/mcptest run --watch                  # Watch mode — reruns on file changes
 ```
@@ -162,6 +164,31 @@ Scaffold a starter `mcptest.yaml` config file.
 npx @shreyasgurav/mcptest init
 npx @shreyasgurav/mcptest init -o tests/api.mcptest.yaml
 ```
+
+### `mcptest generate`
+
+AI-generate a complete test suite (`mcptest.yaml`) from your server's tool schemas. It connects to the server, queries its available tools, sends the schemas to Claude, and writes out a fully defined test suite.
+
+```bash
+# Set your Anthropic API Key
+export ANTHROPIC_API_KEY="your-key"
+
+npx @shreyasgurav/mcptest generate --command node --args server.js
+npx @shreyasgurav/mcptest generate --url http://localhost:3000/mcp --transport http
+npx @shreyasgurav/mcptest generate -c my-config.yaml -o tests/generated.mcptest.yaml
+```
+
+### `mcptest diff`
+
+Compare two server versions (e.g., your production/main vs local development branch) by running the same test suite inputs against both and displaying a structural diff of the outputs.
+
+```bash
+npx @shreyasgurav/mcptest diff \
+  --server-a "node ./dist-v1/index.js" \
+  --server-b "node ./dist-v2/index.js" \
+  --suite my-tests.mcptest.yaml
+```
+
 
 ## Test File Format
 
@@ -310,6 +337,50 @@ Keep a terminal open while developing — mcptest reruns your suite automaticall
 
 ```bash
 npx @shreyasgurav/mcptest run --watch
+```
+
+### Snapshot Testing
+
+If your server returns complex JSON shapes or outputs that shouldn't change, you can use snapshot assertions.
+
+```yaml
+tests:
+  - name: User Profile Stable Response
+    tool: get_user
+    input: { id: 1 }
+    expect:
+      snapshot: true
+```
+
+1. **First Run**: Creates a new snapshot file under `.mcptest/snapshots/user_profile_stable_response.json` containing the tool's actual output.
+2. **Subsequent Runs**: Compares the tool's output against the saved file and reports mismatches.
+3. **Updating**: Run with `mcptest run --update-snapshots` to overwrite existing snapshot files with the new responses.
+
+### Resource & Prompt Testing
+
+In addition to tools, `mcptest` can test MCP **resources** and **prompts**.
+
+#### Resource Testing
+Define a `resources` block in your test suite to fetch and inspect resource contents.
+
+```yaml
+resources:
+  - uri: "file:///logs/today.txt"
+    expect:
+      contains: "error"
+      mimeType: "text/plain"
+```
+
+#### Prompt Testing
+Define a `prompts` block in your test suite to evaluate prompt template rendering.
+
+```yaml
+prompts:
+  - prompt: "summarize"
+    args:
+      text: "This is a long article..."
+    expect:
+      contains: "summary"
 ```
 
 ## GitHub Actions

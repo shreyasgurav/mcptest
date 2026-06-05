@@ -1,7 +1,7 @@
 import pc from "picocolors";
 import type { SuiteResult, TestResult } from "../types.js";
 
-export type ReporterFormat = "pretty" | "json";
+export type ReporterFormat = "pretty" | "json" | "html";
 
 /** Print a per-test line as it completes (pretty mode only). */
 export function reportTestLine(result: TestResult): void {
@@ -13,6 +13,7 @@ export function reportTestLine(result: TestResult): void {
     case "failed":
       console.log(`  ${pc.red("✗")} ${result.name} ${time}`);
       printFailedAssertions(result);
+      printRawResponse(result);
       break;
     case "errored":
       console.log(`  ${pc.red("⚠")} ${result.name} ${time}`);
@@ -34,6 +35,22 @@ function printFailedAssertions(result: TestResult): void {
     if (a.actual !== undefined) {
       console.log(`        actual:   ${pc.red(format(a.actual))}`);
     }
+  }
+}
+
+/** Print the raw server response when a test fails (helps debugging). */
+function printRawResponse(result: TestResult): void {
+  if (!result.rawResponse) return;
+  const text = result.rawResponse.text;
+  if (!text) return;
+
+  console.log("");
+  console.log(`      ${pc.dim("server response:")}`);
+  // Truncate long responses
+  const maxLen = 500;
+  const display = text.length > maxLen ? text.slice(0, maxLen) + "…" : text;
+  for (const line of display.split("\n")) {
+    console.log(`      ${pc.dim(line)}`);
   }
 }
 

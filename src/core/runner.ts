@@ -4,9 +4,12 @@ import type {
   TestResult,
   TestSuite,
   HookAction,
+  ResourceTestCase,
+  PromptTestCase,
 } from "../types.js";
 import { McpTestClient } from "./client.js";
-import { evaluate } from "./assertions.js";
+import { evaluate, evaluateSnapshot, evaluateResource, evaluatePrompt } from "./assertions.js";
+import type { EvaluateOptions } from "./assertions.js";
 import pc from "picocolors";
 
 const DEFAULT_TIMEOUT = 15000;
@@ -16,6 +19,8 @@ export interface RunOptions {
   bail?: boolean;
   /** Called after each test completes, for live reporting. */
   onResult?: (result: TestResult) => void;
+  /** When true, overwrite saved snapshots instead of comparing. */
+  updateSnapshots?: boolean;
 }
 
 /** Helper to run a list of hook actions sequentially. */
@@ -44,6 +49,7 @@ export async function runSuite(
   const start = Date.now();
   const results: TestResult[] = [];
   const client = new McpTestClient(suite.server);
+  const evalOpts: EvaluateOptions = { updateSnapshots: options.updateSnapshots };
 
   let connectError: string | undefined;
   try {
@@ -61,7 +67,11 @@ export async function runSuite(
     }
   }
 
+  // --- Tool tests ---
+  let shouldBail = false;
   for (const test of suite.tests) {
+    if (shouldBail) break;
+
     const hookOrConnectErr = connectError || beforeHookError;
     if (hookOrConnectErr) {
       const errored = erroredResult(
@@ -88,12 +98,38 @@ export async function runSuite(
       continue;
     }
 
-    const result = await runTest(client, test, suite.timeout ?? DEFAULT_TIMEOUT);
+    const result = await runTest(client, test, suite.timeout ?? DEFAULT_TIMEOUT, evalOpts);
     results.push(result);
     options.onResult?.(result);
 
     if (options.bail && (result.status === "failed" || result.status === "errored")) {
-      break;
+      shouldBail = true;
+    }
+  }
+
+  // --- Resource tests ---
+  if (!connectError && !beforeHookError && suite.resources && !shouldBail) {
+    for (const rt of suite.resources) {
+      if (shouldBail) break;
+      const result = await runResourceTest(client, rt, suite.timeout ?? DEFAULT_TIMEOUT);
+      results.push(result);
+      options.onResult?.(result);
+      if (options.bail && (result.status === "failed" || result.status === "errored")) {
+        shouldBail = true;
+      }
+    }
+  }
+
+  // --- Prompt tests ---
+  if (!connectError && !beforeHookError && suite.prompts && !shouldBail) {
+    for (const pt of suite.prompts) {
+      if (shouldBail) break;
+      const result = await runPromptTest(client, pt, suite.timeout ?? DEFAULT_TIMEOUT);
+      results.push(result);
+      options.onResult?.(result);
+      if (options.bail && (result.status === "failed" || result.status === "errored")) {
+        shouldBail = true;
+      }
     }
   }
 
@@ -121,7 +157,8 @@ export async function runSuite(
 async function runTest(
   client: McpTestClient,
   test: TestCase,
-  defaultTimeout: number
+  defaultTimeout: number,
+  evalOpts: EvaluateOptions
 ): Promise<TestResult> {
   const name = test.name ?? test.tool;
   const start = Date.now();
@@ -149,10 +186,22 @@ async function runTest(
       const result = await client.callTool(test.tool, test.input, timeout);
 
       // 3. Evaluate assertions
-      const assertions = evaluate(test.expect, result);
+      const assertions = evaluate(test.expect, result, evalOpts);
+
+      // 4. Evaluate snapshot separately (to pass the test name)
+      if (test.expect?.snapshot === true) {
+        // Remove the placeholder snapshot assertion added by evaluate()
+        const snapshotIdx = assertions.findIndex((a) => a.path === "snapshot");
+        if (snapshotIdx >= 0) assertions.splice(snapshotIdx, 1);
+        // Add the properly-named one
+        assertions.push(
+          evaluateSnapshot(name, result, evalOpts.updateSnapshots ?? false)
+        );
+      }
+
       const ok = assertions.every((a) => a.ok);
 
-      // 4. Teardown hooks
+      // 5. Teardown hooks
       if (test.teardown && test.teardown.length > 0) {
         await runHooks(client, test.teardown, timeout);
       }
@@ -163,6 +212,10 @@ async function runTest(
         status: ok ? "passed" : "failed",
         durationMs: Date.now() - start,
         assertions,
+        // Include raw response on failure for debugging
+        rawResponse: !ok
+          ? { isError: result.isError, text: result.text, content: result.content }
+          : undefined,
       };
 
       if (ok) {
@@ -208,6 +261,76 @@ async function runTest(
     assertions: [],
     error: "Unknown execution error",
   };
+}
+
+async function runResourceTest(
+  client: McpTestClient,
+  test: ResourceTestCase,
+  defaultTimeout: number
+): Promise<TestResult> {
+  const name = test.name ?? `resource:${test.uri}`;
+  const start = Date.now();
+
+  try {
+    const result = await client.readResource(test.uri, defaultTimeout);
+    const assertions = evaluateResource(test.expect, result);
+    const ok = assertions.every((a) => a.ok);
+
+    return {
+      name,
+      tool: `resource:${test.uri}`,
+      status: ok ? "passed" : "failed",
+      durationMs: Date.now() - start,
+      assertions,
+      rawResponse: !ok
+        ? { isError: false, text: result.text, content: [] }
+        : undefined,
+    };
+  } catch (err) {
+    return {
+      name,
+      tool: `resource:${test.uri}`,
+      status: "errored",
+      durationMs: Date.now() - start,
+      assertions: [],
+      error: (err as Error).message,
+    };
+  }
+}
+
+async function runPromptTest(
+  client: McpTestClient,
+  test: PromptTestCase,
+  defaultTimeout: number
+): Promise<TestResult> {
+  const name = test.name ?? `prompt:${test.prompt}`;
+  const start = Date.now();
+
+  try {
+    const result = await client.getPrompt(test.prompt, test.args, defaultTimeout);
+    const assertions = evaluatePrompt(test.expect, result);
+    const ok = assertions.every((a) => a.ok);
+
+    return {
+      name,
+      tool: `prompt:${test.prompt}`,
+      status: ok ? "passed" : "failed",
+      durationMs: Date.now() - start,
+      assertions,
+      rawResponse: !ok
+        ? { isError: false, text: result.text, content: [] }
+        : undefined,
+    };
+  } catch (err) {
+    return {
+      name,
+      tool: `prompt:${test.prompt}`,
+      status: "errored",
+      durationMs: Date.now() - start,
+      assertions: [],
+      error: (err as Error).message,
+    };
+  }
 }
 
 function erroredResult(test: TestCase, message: string): TestResult {

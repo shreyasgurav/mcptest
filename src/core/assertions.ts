@@ -1,6 +1,7 @@
 import Ajv from "ajv";
 import type { AssertionResult, ExpectSpec } from "../types.js";
-import type { ToolCallResult } from "./client.js";
+import type { ToolCallResult, ResourceResult, PromptResult } from "./client.js";
+import { checkSnapshot } from "./snapshots.js";
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
@@ -22,6 +23,12 @@ const OPERATORS = new Set([
   "$in",
 ]);
 
+/** Options for the evaluate function. */
+export interface EvaluateOptions {
+  /** When true, overwrite saved snapshots instead of comparing. */
+  updateSnapshots?: boolean;
+}
+
 /**
  * Evaluate all assertions in `expect` against a normalized tool result.
  * Returns a flat list of assertion outcomes. An empty `expect` (or absent)
@@ -29,7 +36,8 @@ const OPERATORS = new Set([
  */
 export function evaluate(
   expect: ExpectSpec | undefined,
-  result: ToolCallResult
+  result: ToolCallResult,
+  options: EvaluateOptions = {}
 ): AssertionResult[] {
   const out: AssertionResult[] = [];
 
@@ -117,7 +125,155 @@ export function evaluate(
     }
   }
 
+  if (expect?.snapshot === true) {
+    const parsed = parseJsonOutput(result);
+    const value = parsed.ok ? parsed.value : result.text;
+    // testName is not available here — caller must pass it or we use a placeholder
+    // We use the result text as a fallback key for snapshot
+    out.push(
+      checkSnapshot(
+        "test", // Will be overridden by runner passing the test name
+        value,
+        options.updateSnapshots ?? false
+      )
+    );
+  }
+
   return out;
+}
+
+/**
+ * Evaluate assertions for a resource test.
+ */
+export function evaluateResource(
+  expect: { mimeType?: string; contains?: string; matches?: string; text?: string } | undefined,
+  result: ResourceResult
+): AssertionResult[] {
+  const out: AssertionResult[] = [];
+
+  // Basic assertion: reading the resource should succeed (we got here = success)
+  out.push({
+    ok: true,
+    path: "resource",
+    message: "resource read successfully",
+  });
+
+  if (expect?.mimeType !== undefined) {
+    out.push({
+      ok: result.mimeType === expect.mimeType,
+      path: "mimeType",
+      message: `expected mimeType to be "${expect.mimeType}"`,
+      expected: expect.mimeType,
+      actual: result.mimeType ?? "(none)",
+    });
+  }
+
+  if (expect?.contains !== undefined) {
+    out.push({
+      ok: result.text.includes(expect.contains),
+      path: "text",
+      message: `expected resource text to contain "${expect.contains}"`,
+      expected: expect.contains,
+      actual: truncate(result.text),
+    });
+  }
+
+  if (expect?.matches !== undefined) {
+    let ok = false;
+    try {
+      ok = new RegExp(expect.matches).test(result.text);
+    } catch {
+      ok = false;
+    }
+    out.push({
+      ok,
+      path: "text",
+      message: `expected resource text to match /${expect.matches}/`,
+      expected: expect.matches,
+      actual: truncate(result.text),
+    });
+  }
+
+  if (expect?.text !== undefined) {
+    out.push({
+      ok: result.text === expect.text,
+      path: "text",
+      message: "expected resource text to equal",
+      expected: expect.text,
+      actual: truncate(result.text),
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Evaluate assertions for a prompt test.
+ */
+export function evaluatePrompt(
+  expect: { contains?: string; matches?: string; text?: string } | undefined,
+  result: PromptResult
+): AssertionResult[] {
+  const out: AssertionResult[] = [];
+
+  // Basic assertion: getting the prompt should succeed
+  out.push({
+    ok: true,
+    path: "prompt",
+    message: "prompt rendered successfully",
+  });
+
+  if (expect?.contains !== undefined) {
+    out.push({
+      ok: result.text.includes(expect.contains),
+      path: "text",
+      message: `expected prompt text to contain "${expect.contains}"`,
+      expected: expect.contains,
+      actual: truncate(result.text),
+    });
+  }
+
+  if (expect?.matches !== undefined) {
+    let ok = false;
+    try {
+      ok = new RegExp(expect.matches).test(result.text);
+    } catch {
+      ok = false;
+    }
+    out.push({
+      ok,
+      path: "text",
+      message: `expected prompt text to match /${expect.matches}/`,
+      expected: expect.matches,
+      actual: truncate(result.text),
+    });
+  }
+
+  if (expect?.text !== undefined) {
+    out.push({
+      ok: result.text === expect.text,
+      path: "text",
+      message: "expected prompt text to equal",
+      expected: expect.text,
+      actual: truncate(result.text),
+    });
+  }
+
+  return out;
+}
+
+/**
+ * Evaluate snapshot for a named test. This is called from runner
+ * with the actual test name for proper snapshot file naming.
+ */
+export function evaluateSnapshot(
+  testName: string,
+  result: ToolCallResult,
+  update: boolean
+): AssertionResult {
+  const parsed = parseJsonOutput(result);
+  const value = parsed.ok ? parsed.value : result.text;
+  return checkSnapshot(testName, value, update);
 }
 
 /** Parse the JSON output of a tool result, preferring structuredContent. */

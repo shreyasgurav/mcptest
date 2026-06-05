@@ -67,6 +67,9 @@ export interface ExpectSpec {
 
   /** Validate the parsed JSON output against this JSON Schema. */
   schema?: Record<string, unknown>;
+
+  /** Snapshot testing. First run saves; subsequent runs compare. */
+  snapshot?: boolean;
 }
 
 /** A single test case. */
@@ -102,6 +105,49 @@ export interface TestCase {
   retryDelay?: number;
 }
 
+/** A resource test case. */
+export interface ResourceTestCase {
+  /** Human-readable name. Defaults to the resource URI if omitted. */
+  name?: string;
+
+  /** URI of the resource to read. */
+  uri: string;
+
+  /** Assertions on the resource content. */
+  expect?: {
+    /** Expected MIME type. */
+    mimeType?: string;
+    /** Assert the resource text contains this substring. */
+    contains?: string;
+    /** Assert the resource text matches this regex. */
+    matches?: string;
+    /** Assert the resource text exactly equals this string. */
+    text?: string;
+  };
+}
+
+/** A prompt test case. */
+export interface PromptTestCase {
+  /** Human-readable name. Defaults to the prompt name if omitted. */
+  name?: string;
+
+  /** Name of the prompt to invoke. */
+  prompt: string;
+
+  /** Arguments passed to the prompt. */
+  args?: Record<string, string>;
+
+  /** Assertions on the rendered prompt. */
+  expect?: {
+    /** Assert the rendered prompt contains this substring. */
+    contains?: string;
+    /** Assert the rendered prompt matches this regex. */
+    matches?: string;
+    /** Assert the rendered prompt text exactly equals this string. */
+    text?: string;
+  };
+}
+
 /** A full test suite, typically loaded from a YAML or JSON file. */
 export interface TestSuite {
   /** Optional suite name (defaults to the file name). */
@@ -115,6 +161,12 @@ export interface TestSuite {
 
   /** Test cases. */
   tests: TestCase[];
+
+  /** Resource test cases. */
+  resources?: ResourceTestCase[];
+
+  /** Prompt test cases. */
+  prompts?: PromptTestCase[];
 
   /** Absolute path the suite was loaded from (filled in by the loader). */
   filePath?: string;
@@ -145,6 +197,12 @@ export interface TestResult {
   assertions: AssertionResult[];
   /** Set when status is "errored" (transport / protocol failure). */
   error?: string;
+  /** Raw server response — populated for failed tests and when verbose. */
+  rawResponse?: {
+    isError: boolean;
+    text: string;
+    content: unknown[];
+  };
 }
 
 /** Result of running an entire suite. */
