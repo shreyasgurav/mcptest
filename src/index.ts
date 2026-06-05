@@ -51,7 +51,3 @@ export { generateHtmlReport, writeHtmlReport } from "./core/html-reporter.js";
 export { diffServers } from "./core/differ.js";
 export type { DiffResult, DiffChange } from "./core/differ.js";
 export { checkSnapshot } from "./core/snapshots.js";
-
-// Monitor & Dashboard
-export { startMonitor, parseInterval, loadHistory, calculateUptime } from "./core/monitor.js";
-export { startDashboard, buildDashboardHtml } from "./core/dashboard.js";

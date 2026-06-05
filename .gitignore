@@ -1,6 +1,3 @@
-# OpenMemory - IDE/Assistant specific rules
-.windsurf/rules/openmemory.md
-
 # Dependencies
 node_modules/
 
@@ -19,3 +16,15 @@ npm-debug.log*
 
 # OS
 .DS_Store
+
+# mcpunit data
+.mcpunit/
+.mcptest/
+
+# Generated reports
+*.html
+
+# IDE
+.windsurf/
+.idea/
+.vscode/

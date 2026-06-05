@@ -216,30 +216,3 @@ export interface SuiteResult {
   errored: number;
   durationMs: number;
 }
-
-export interface MonitorOptions {
-  intervalMs: number;
-  alertSlack?: string;
-  alertWebhook?: string;
-  alertEmail?: string;
-  onRun?: (run: MonitorRun) => void;
-  dashboard?: boolean;
-  port?: number;
-}
-
-export interface MonitorRun {
-  run: number;
-  timestamp: string;
-  passed: number;
-  failed: number;
-  errored: number;
-  durationMs: number;
-  results: TestResult[];
-  alerted: boolean;
-}
-
-export interface DashboardOptions {
-  port: number;
-  suiteFile?: string;
-  open?: boolean;
-}

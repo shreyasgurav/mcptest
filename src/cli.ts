@@ -36,7 +36,7 @@ import type { ServerConfig } from "./types.js";
 import { McpUnitClient } from "./core/client.js";
 import type { ToolInfo } from "./core/client.js";
 
-const pkg = { name: "mcpunit", version: "0.4.0" };
+const pkg = { name: "mcpunit", version: "0.5.0" };
 
 
 const program = new Command()
@@ -721,70 +721,5 @@ function printToolsTable(tools: ToolInfo[]) {
   console.log(pc.dim(borderBottom));
   console.log("");
 }
-
-// ─── monitor ────────────────────────────────────────────────────────
-program
-  .command("monitor")
-  .description("Continuously run tests on a schedule and alert on failures")
-  .argument("[path]", "Test file", "mcpunit.yaml")
-  .option("-i, --interval <interval>", "Run interval (e.g. 30s, 5m, 1h)", "15m")
-  .option("--alert-slack <url>", "Slack webhook URL for failure alerts")
-  .option("--alert-webhook <url>", "Generic webhook URL for alerts")
-  .option("--dashboard", "Start web dashboard alongside monitor", false)
-  .option("-p, --port <port>", "Dashboard port", "3847")
-  .action(async (path: string, opts: { interval: string; alertSlack?: string; alertWebhook?: string; dashboard: boolean; port: string }) => {
-    const { startMonitor, parseInterval } = await import("./core/monitor.js");
-    
-    // Discover suite
-    const files = discoverSuiteFiles(path);
-    if (files.length === 0) {
-      console.error(pc.red(`  Error: No test suite found at ${path}`));
-      process.exit(1);
-    }
-    const file = files[0]; // monitor runs one suite
-    const suite = loadSuite(file);
-    
-    await startMonitor(suite, {
-      intervalMs: parseInterval(opts.interval),
-      alertSlack: opts.alertSlack,
-      alertWebhook: opts.alertWebhook,
-      dashboard: opts.dashboard,
-      port: parseInt(opts.port, 10)
-    });
-  });
-
-// ─── dashboard ──────────────────────────────────────────────────────
-program
-  .command("dashboard")
-  .description("Start the mcpunit web dashboard")
-  .option("-p, --port <port>", "Dashboard port", "3847")
-  .option("--suite <file>", "Specific test suite file history to show")
-  .option("--open", "Auto-open browser", false)
-  .action(async (opts: { port: string; suite?: string; open: boolean }) => {
-    const { startDashboard } = await import("./core/dashboard.js");
-    const { loadHistory } = await import("./core/monitor.js");
-    const port = parseInt(opts.port, 10);
-    
-    console.log("");
-    console.log(pc.bold(pc.magenta("  mcpunit dashboard")));
-    console.log(pc.dim("  ─────────────────────────────────"));
-    console.log(pc.dim(`  Dashboard: http://localhost:${port}`));
-    
-    if (opts.suite) {
-      console.log(pc.dim(`  Suite:     ${opts.suite}`));
-    }
-    
-    const hist = loadHistory(opts.suite);
-    console.log(pc.dim(`  History:   ${hist.length} runs loaded`));
-    console.log("");
-    console.log(pc.yellow("  Press Ctrl+C to stop."));
-    
-    try {
-      await startDashboard({ port, suiteFile: opts.suite, open: opts.open });
-    } catch (err) {
-      console.error(pc.red(`  Failed to start dashboard: ${(err as Error).message}`));
-      process.exit(1);
-    }
-  });
 
 program.parse();
