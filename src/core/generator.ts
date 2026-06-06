@@ -276,7 +276,7 @@ Generate a complete mcpunit YAML test suite that:
 3. Tests edge cases (empty strings, zero values, boundary conditions)
 4. Tests error cases where appropriate (missing required fields — use isError: true)
 5. Uses appropriate expect assertions: text, contains, matches, json with operators ($eq, $type, $minLength, $contains), schema, isError
-6. Adds setup/teardown hooks where tools have state dependencies (e.g. create before delete)
+6. Uses suite-level \`before\` hooks to create prerequisite state (e.g. creating files before reading them, creating records before fetching)
 7. Uses descriptive test names that explain what is being verified
 8. If a field has "format": "uuid" or its name ends with "_id" and the schema type is "string", generate a valid UUID like "00000000-0000-0000-0000-000000000000" — never use short placeholder strings like "abc123"
 9. For fields named "project_id", "document_id", "id", or similar ID fields, always use valid UUID format unless the schema explicitly says otherwise
@@ -297,6 +297,12 @@ server:
 ${serverBlock}
 
 timeout: ${timeoutValue}
+
+# Use before hooks to create prerequisite files/state before testing read operations
+before:
+  - tool: <setup_tool_name>
+    input:
+      <key>: <value>
 
 tests:
   - name: <descriptive test name>
