@@ -36,7 +36,7 @@ import type { ServerConfig } from "./types.js";
 import { McpUnitClient } from "./core/client.js";
 import type { ToolInfo } from "./core/client.js";
 
-const pkg = { name: "mcpunit", version: "0.5.0" };
+const pkg = { name: "mcpunit", version: "0.5.1" };
 
 
 const program = new Command()
@@ -59,8 +59,7 @@ program
   )
   .option(
     "-t, --timeout <ms>",
-    "Default per-test timeout in ms",
-    "15000"
+    "Default per-test timeout in ms (overrides YAML config)"
   )
   .option(
     "--watch",
@@ -72,7 +71,7 @@ program
     "Update saved snapshots instead of comparing",
     false
   )
-  .action(async (path: string, opts: { bail: boolean; format: string; timeout: string; watch: boolean; updateSnapshots: boolean }) => {
+  .action(async (path: string, opts: { bail: boolean; format: string; timeout?: string; watch: boolean; updateSnapshots: boolean }) => {
     const format = opts.format as ReporterFormat;
     const isPretty = format === "pretty";
 
@@ -110,9 +109,11 @@ program
             const allResults = [];
             for (const file of files) {
               const suite = loadSuite(file);
-              const cliTimeout = parseInt(opts.timeout, 10);
-              if (!isNaN(cliTimeout) && cliTimeout > 0) {
-                suite.timeout = cliTimeout;
+              if (opts.timeout) {
+                const cliTimeout = parseInt(opts.timeout, 10);
+                if (!isNaN(cliTimeout) && cliTimeout > 0) {
+                  suite.timeout = cliTimeout;
+                }
               }
               reportSuiteHeader({
                 name: suite.name ?? basename(file),
@@ -195,10 +196,12 @@ program
     for (const file of files) {
       const suite = loadSuite(file);
 
-      // Override timeout if CLI flag supplied
-      const cliTimeout = parseInt(opts.timeout, 10);
-      if (!isNaN(cliTimeout) && cliTimeout > 0) {
-        suite.timeout = cliTimeout;
+      // Override timeout only if CLI flag was explicitly supplied
+      if (opts.timeout) {
+        const cliTimeout = parseInt(opts.timeout, 10);
+        if (!isNaN(cliTimeout) && cliTimeout > 0) {
+          suite.timeout = cliTimeout;
+        }
       }
 
       if (isPretty) {
@@ -237,7 +240,8 @@ program
       // Try to open in browser
       try {
         const { exec } = await import("node:child_process");
-        exec(`open "${outputPath}"`);
+        const openCmd = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
+        exec(`${openCmd} "${outputPath}"`);
       } catch {
         // Silently ignore if open fails
       }

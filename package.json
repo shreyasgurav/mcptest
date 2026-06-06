@@ -1,6 +1,6 @@
 {
   "name": "mcpunit",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A declarative, CI-first testing framework for Model Context Protocol (MCP) servers. Like pytest/vitest, but for MCP.",
   "type": "module",
   "license": "MIT",

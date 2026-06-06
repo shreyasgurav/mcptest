@@ -106,13 +106,15 @@ export function resolveApiKey(
 async function callAnthropic(
   apiKey: string,
   model: string,
-  prompt: string
+  systemPrompt: string,
+  userPrompt: string
 ): Promise<string> {
   const anthropic = new Anthropic({ apiKey });
   const response = await anthropic.messages.create({
     model,
     max_tokens: 4096,
-    messages: [{ role: "user", content: prompt }],
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
   });
   return response.content[0].type === "text" ? response.content[0].text : "";
 }
@@ -120,12 +122,16 @@ async function callAnthropic(
 async function callOpenAI(
   apiKey: string,
   model: string,
-  prompt: string
+  systemPrompt: string,
+  userPrompt: string
 ): Promise<string> {
   const openai = new OpenAI({ apiKey });
   const response = await openai.chat.completions.create({
     model,
-    messages: [{ role: "user", content: prompt }],
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
     max_tokens: 4096,
   });
   return response.choices[0]?.message?.content ?? "";
@@ -134,12 +140,16 @@ async function callOpenAI(
 async function callGoogle(
   apiKey: string,
   model: string,
-  prompt: string
+  systemPrompt: string,
+  userPrompt: string
 ): Promise<string> {
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const genai = new GoogleGenerativeAI(apiKey);
-  const gemini = genai.getGenerativeModel({ model });
-  const result = await gemini.generateContent(prompt);
+  const gemini = genai.getGenerativeModel({
+    model,
+    systemInstruction: systemPrompt,
+  });
+  const result = await gemini.generateContent(userPrompt);
   return result.response.text();
 }
 
@@ -206,19 +216,20 @@ export async function generateSuite(
   }
 
   const serverBlock = buildServerBlock(server);
-  const promptContent = buildPrompt(tools, resources, prompts, serverBlock);
+  const isRemote = server.transport === "http" || server.transport === "sse";
+  const { systemPrompt, userPrompt } = buildPrompts(tools, resources, prompts, serverBlock, isRemote);
 
   // Call the appropriate provider
   let yaml = "";
   switch (provider) {
     case "anthropic":
-      yaml = await callAnthropic(apiKey, resolvedModel, promptContent);
+      yaml = await callAnthropic(apiKey, resolvedModel, systemPrompt, userPrompt);
       break;
     case "openai":
-      yaml = await callOpenAI(apiKey, resolvedModel, promptContent);
+      yaml = await callOpenAI(apiKey, resolvedModel, systemPrompt, userPrompt);
       break;
     case "google":
-      yaml = await callGoogle(apiKey, resolvedModel, promptContent);
+      yaml = await callGoogle(apiKey, resolvedModel, systemPrompt, userPrompt);
       break;
   }
 
@@ -248,20 +259,16 @@ function inferProviderFromKey(apiKey?: string): LLMProvider {
   return "anthropic";
 }
 
-function buildPrompt(
+function buildPrompts(
   tools: unknown[],
   resources: unknown[],
   prompts: unknown[],
-  serverBlock: string
-): string {
-  return `You are an expert at writing mcpunit YAML test suites for MCP (Model Context Protocol) servers.
+  serverBlock: string,
+  isRemote: boolean
+): { systemPrompt: string; userPrompt: string } {
+  const timeoutValue = isRemote ? 30000 : 15000;
 
-Here are the tools exposed by this MCP server:
-${JSON.stringify(tools, null, 2)}
-
-${resources.length > 0 ? `Here are the resources:\n${JSON.stringify(resources, null, 2)}` : ""}
-
-${prompts.length > 0 ? `Here are the prompts:\n${JSON.stringify(prompts, null, 2)}` : ""}
+  const systemPrompt = `You are an expert at writing mcpunit YAML test suites for MCP (Model Context Protocol) servers.
 
 Generate a complete mcpunit YAML test suite that:
 1. Tests each tool with realistic inputs derived from the input schemas
@@ -271,16 +278,25 @@ Generate a complete mcpunit YAML test suite that:
 5. Uses appropriate expect assertions: text, contains, matches, json with operators ($eq, $type, $minLength, $contains), schema, isError
 6. Adds setup/teardown hooks where tools have state dependencies (e.g. create before delete)
 7. Uses descriptive test names that explain what is being verified
+8. If a field has "format": "uuid" or its name ends with "_id" and the schema type is "string", generate a valid UUID like "00000000-0000-0000-0000-000000000000" — never use short placeholder strings like "abc123"
+9. For fields named "project_id", "document_id", "id", or similar ID fields, always use valid UUID format unless the schema explicitly says otherwise
 
-Return ONLY valid YAML. No explanation. No markdown fences. No comments. Just the YAML content.
+Return ONLY valid YAML. No explanation. No markdown fences. No comments. Just the YAML content.`;
 
-Use this exact structure:
+  const userPrompt = `Here are the tools exposed by this MCP server:
+${JSON.stringify(tools, null, 2)}
+
+${resources.length > 0 ? `Here are the resources:\n${JSON.stringify(resources, null, 2)}` : ""}
+
+${prompts.length > 0 ? `Here are the prompts:\n${JSON.stringify(prompts, null, 2)}` : ""}
+
+Generate a YAML test suite using this exact structure:
 name: <descriptive-suite-name>
 
 server:
 ${serverBlock}
 
-timeout: 15000
+timeout: ${timeoutValue}
 
 tests:
   - name: <descriptive test name>
@@ -303,6 +319,8 @@ ${prompts.length > 0 ? `prompts:
       <key>: <value>
     expect:
       contains: <expected content>` : ""}`;
+
+  return { systemPrompt, userPrompt };
 }
 
 function buildServerBlock(server: ServerConfig): string {
