@@ -207,6 +207,18 @@ export async function generateSuite(
   const resources = await client.listResources();
   const prompts = await client.listPrompts();
 
+  // Discovery phase — call each tool with sample inputs, collect real responses
+  const discoveryResults: Record<string, unknown> = {};
+  for (const tool of tools) {
+    try {
+      const sampleInput = buildSampleInput(tool.inputSchema);
+      const result = await client.callTool(tool.name, sampleInput, 15000);
+      discoveryResults[tool.name] = result;
+    } catch {
+      // skip — tool may need state that doesn't exist yet or input was invalid
+    }
+  }
+
   await client.close();
 
   if (tools.length === 0 && resources.length === 0 && prompts.length === 0) {
@@ -217,7 +229,7 @@ export async function generateSuite(
 
   const serverBlock = buildServerBlock(server);
   const isRemote = server.transport === "http" || server.transport === "sse";
-  const { systemPrompt, userPrompt } = buildPrompts(tools, resources, prompts, serverBlock, isRemote);
+  const { systemPrompt, userPrompt } = buildPrompts(tools, resources, prompts, serverBlock, isRemote, discoveryResults);
 
   // Call the appropriate provider
   let yaml = "";
@@ -260,11 +272,12 @@ function inferProviderFromKey(apiKey?: string): LLMProvider {
 }
 
 function buildPrompts(
-  tools: unknown[],
+  tools: any[],
   resources: unknown[],
   prompts: unknown[],
   serverBlock: string,
-  isRemote: boolean
+  isRemote: boolean,
+  discoveryResults: Record<string, unknown>
 ): { systemPrompt: string; userPrompt: string } {
   const timeoutValue = isRemote ? 30000 : 15000;
 
@@ -283,12 +296,20 @@ Generate a complete mcpunit YAML test suite that:
 
 Return ONLY valid YAML. No explanation. No markdown fences. No comments. Just the YAML content.`;
 
-  const userPrompt = `Here are the tools exposed by this MCP server:
-${JSON.stringify(tools, null, 2)}
+  const userPrompt = `Here are the tools and their ACTUAL responses when called with sample inputs:
+
+${tools.map(t => `
+Tool: ${t.name}
+Schema: ${JSON.stringify(t.inputSchema, null, 2)}
+Sample response: ${JSON.stringify(discoveryResults[t.name] ?? "no response — needs prereq state", null, 2)}
+`).join('\n')}
 
 ${resources.length > 0 ? `Here are the resources:\n${JSON.stringify(resources, null, 2)}` : ""}
 
 ${prompts.length > 0 ? `Here are the prompts:\n${JSON.stringify(prompts, null, 2)}` : ""}
+
+Write assertions based on the ACTUAL responses above, not invented values.
+Use contains: instead of text: for partial matches.
 
 Generate a YAML test suite using this exact structure:
 name: <descriptive-suite-name>
@@ -353,4 +374,31 @@ function buildServerBlock(server: ServerConfig): string {
     }
   }
   return lines.join("\n");
+}
+
+function buildSampleInput(schema: unknown): Record<string, unknown> {
+  const s = schema as any;
+  const result: Record<string, unknown> = {};
+  if (!s?.properties) return result;
+  
+  for (const [key, prop] of Object.entries(s.properties as Record<string, any>)) {
+    if (prop.type === "string") {
+      if (key.endsWith("_id") || key === "id") {
+        result[key] = "00000000-0000-0000-0000-000000000000";
+      } else if (key === "path" || key === "source" || key === "destination") {
+        result[key] = "/private/tmp";
+      } else if (key === "query" || key === "content") {
+        result[key] = "test";
+      } else {
+        result[key] = "test";
+      }
+    } else if (prop.type === "number" || prop.type === "integer") {
+      result[key] = 1;
+    } else if (prop.type === "boolean") {
+      result[key] = true;
+    } else if (prop.type === "array") {
+      result[key] = [];
+    }
+  }
+  return result;
 }

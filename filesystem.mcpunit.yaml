@@ -1,0 +1,145 @@
+name: FileOperationSuite
+
+server:
+  transport: stdio
+  command: npx
+  args:
+    - "-y"
+    - "@modelcontextprotocol/server-filesystem"
+    - "/private/tmp"
+
+timeout: 15000
+
+before:
+  - tool: create_directory
+    input:
+      path: "/private/tmp/test_directory"
+  - tool: write_file
+    input:
+      path: "/private/tmp/test_directory/sample.txt"
+      content: "This is a sample file content. It has multiple lines for testing.\nLine 2.\nLine 3."
+
+tests:
+  - name: "Read whole text file contents"
+    tool: read_text_file
+    input:
+      path: "/private/tmp/test_directory/sample.txt"
+    expect:
+      text: "This is a sample file content. It has multiple lines for testing.\nLine 2.\nLine 3."
+  
+  - name: "Read only first line of text file"
+    tool: read_text_file
+    input:
+      path: "/private/tmp/test_directory/sample.txt"
+      head: 1
+    expect:
+      text: "This is a sample file content. It has multiple lines for testing."
+
+  - name: "Read only last line of text file"
+    tool: read_text_file
+    input:
+      path: "/private/tmp/test_directory/sample.txt"
+      tail: 1
+    expect:
+      text: "Line 3."
+    
+  - name: "Attempt to read file without path"
+    tool: read_text_file
+    input:
+      tail: 1
+    expect:
+      isError: true
+
+  - name: "Write a new text file"
+    tool: write_file
+    input:
+      path: "/private/tmp/test_directory/new_file.txt"
+      content: "New file content."
+    expect:
+      text: "File written successfully."
+
+  - name: "Attempt to write file with missing content"
+    tool: write_file
+    input:
+      path: "/private/tmp/test_directory/incomplete_file.txt"
+    expect:
+      isError: true
+
+  - name: "Edit file content successfully"
+    tool: edit_file
+    input:
+      path: "/private/tmp/test_directory/sample.txt"
+      edits:
+        - oldText: "Line 3."
+          newText: "Final line."
+    expect:
+      text:
+        $contains: "Final line."
+
+  - name: "List directory contents"
+    tool: list_directory
+    input:
+      path: "/private/tmp/test_directory"
+    expect:
+      text:
+        $contains: "[FILE] sample.txt\n[FILE] new_file.txt"
+
+  - name: "List directory contents with sizes"
+    tool: list_directory_with_sizes
+    input:
+      path: "/private/tmp/test_directory"
+      sortBy: "size"
+    expect:
+      text:
+        $contains: "[FILE] new_file.txt"
+
+  - name: "Check directory tree view"
+    tool: directory_tree
+    input:
+      path: "/private/tmp/test_directory"
+    expect:
+      json:
+        - name: "test_directory"
+          type: "directory"
+          children: $type: "array"
+    
+  - name: "Move file to new location"
+    tool: move_file
+    input:
+      source: "/private/tmp/test_directory/new_file.txt"
+      destination: "/private/tmp/test_directory/moved_file.txt"
+    expect:
+      text: "File moved successfully."
+
+  - name: "Search files using pattern"
+    tool: search_files
+    input:
+      path: "/private/tmp/test_directory"
+      pattern: "*.txt"
+    expect:
+      json:
+        $type: "array"
+        $contains: ["/private/tmp/test_directory/sample.txt"]
+
+  - name: "Get file info of an existing file"
+    tool: get_file_info
+    input:
+      path: "/private/tmp/test_directory/sample.txt"
+    expect:
+      json:
+        type: "file"
+        path: "/private/tmp/test_directory/sample.txt"
+
+  - name: "Attempt to get file info with missing path"
+    tool: get_file_info
+    input: {}
+    expect:
+      isError: true
+
+  - name: "List allowed directories"
+    tool: list_allowed_directories
+    input: {}
+    expect:
+      json:
+        $type: "array"
+        $minLength: 1
