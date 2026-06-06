@@ -17,6 +17,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { parse as parseYaml } from "yaml";
 import { McpUnitClient } from "./client.js";
 import type { ServerConfig } from "../types.js";
 
@@ -214,6 +215,7 @@ export async function generateSuite(
       const sampleInput = buildSampleInput(tool.inputSchema);
       const result = await client.callTool(tool.name, sampleInput, 15000);
       discoveryResults[tool.name] = result;
+      console.error('[discovery]', tool.name, JSON.stringify(result).slice(0, 100));
     } catch {
       // skip — tool may need state that doesn't exist yet or input was invalid
     }
@@ -255,6 +257,13 @@ export async function generateSuite(
     .replace(/```\s*$/i, "")
     .trim();
 
+  // Validate the generated YAML before returning
+  try {
+    parseYaml(yaml);
+  } catch (err) {
+    throw new Error(`AI generated invalid YAML: ${(err as Error).message}\n\nRaw output:\n${yaml}`);
+  }
+
   return yaml;
 }
 
@@ -293,6 +302,7 @@ Generate a complete mcpunit YAML test suite that:
 7. Uses descriptive test names that explain what is being verified
 8. If a field has "format": "uuid" or its name ends with "_id" and the schema type is "string", generate a valid UUID like "00000000-0000-0000-0000-000000000000" — never use short placeholder strings like "abc123"
 9. For fields named "project_id", "document_id", "id", or similar ID fields, always use valid UUID format unless the schema explicitly says otherwise
+10. Each \`expect:\` block must have unique keys. Never put two \`contains:\` keys in the same \`expect:\` block. Use a single \`contains:\` with the most important value.
 
 Return ONLY valid YAML. No explanation. No markdown fences. No comments. Just the YAML content.`;
 
