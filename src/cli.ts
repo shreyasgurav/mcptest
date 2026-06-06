@@ -36,7 +36,7 @@ import type { ServerConfig } from "./types.js";
 import { McpUnitClient } from "./core/client.js";
 import type { ToolInfo } from "./core/client.js";
 
-const pkg = { name: "mcpunit", version: "0.5.1" };
+const pkg = { name: "mcpunit", version: "0.5.2" };
 
 
 const program = new Command()

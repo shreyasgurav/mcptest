@@ -333,7 +333,7 @@ function buildServerBlock(server: ServerConfig): string {
     if (server.args && server.args.length > 0) {
       lines.push(`  args:`);
       for (const arg of server.args) {
-        lines.push(`    - ${arg}`);
+        lines.push(`    - "${arg.replace(/"/g, '\\"')}"`);
       }
     }
   }
